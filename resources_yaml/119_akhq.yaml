@@ -1,0 +1,108 @@
+name: akhq
+service_id: 119
+service_display_name: Akhq
+service_short_name: Akhq
+service_man: '# Инструкция по развертыванию Apache Kafka через платформу<br/><br/>---<br/>## 1. Общая информация<br/>AKHQ — это веб-интерфейс для работы с кластерами Apache Kafka.<br/>Позволяет просматривать топики, consumer group''ы, сообщения, ACL, схему безопасности, состояние брокеров и метаданные.<br/>Поддерживает работу с несколькими кластерами Kafka одновременно, включая внутренние и внешние (TLS) подключения.<br/><br/>## Доступные операции<br/>- **create**    — Создание ресурса AKHQ<br/>- **suspend**   — Остановка ресурса<br/>- **resume**    — Возобновление работы ресурса<br/>- **modify**    — Модификация настроек<br/>- **delete**    — Удаление ресурса<br/><br/>---<br/>## 2. Параметры развертывания кластера<br/>Ниже перечислены параметры, которые необходимо указать при создании ресурса Kafka:<br/><br/>* **Кластер Kafka к которому нужно настроить подключение**<br/>Для использования AKHQ необходимо предварительно развернуть сервис Kafka. Пример: `kafka-external`.<br/><br/>* **Платформа для развертывания:**<br/>Платформа для развертывания (среда, в которой будет развернут кластер). Пример: `k8s-3.ext.nubes.ru`.<br/><br/>* **Количество узлов в сети:**<br/>Количество узлов для работы Akhq. Пример `2`<br/><br/>* **Квота (megabyte) памяти пода:**<br/>Квота памяти пода в мегабайтах. Пример: `512`<br/><br/>* **Квота (millicore ) ядра пода:**<br/>Квота CPU пода в миликорах (1000 mCPU = 1 vCPU). Пример: `500`<br/><br/>* **Имя домена:**<br/>Dns Имя по которому будет происходить обращение к сервису. Указать необходимо уникальное имя до . ( то есть если необходимо получить dns ui) Пример: `kafka-external`<br/><br/>---<br/>## 4. Выходные параметры<br/>После успешного развертывания ресурса Kafka платформа возвращает ряд параметров.<br/>Ключевым из них является:<br/><br/>**connectionUrl**<br/>Это полное доменное имя (FQDN), по которому будет доступен интерфейс AKHQ. После развёртывания подождите несколько минут — UI станет доступен по HTTPS, как только все сервисы полностью запустятся.<br/><br/>**Учетные данные**<br/>Здесь представлены поля для ввода логина и пароля, с помощью которых вы сможете авторизоваться в сервисе.<br/><br/>---<br/>## 5. Дополнительная информация<br/>Учётные записи, созданные для работы с AKHQ, предоставляют доступ только для просмотра данных. Для управления Kafka, пожалуйста, используйте возможности личного кабинета.<br/>---'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 175
+      kind: instance
+      action: create
+      params:
+        - id: 550
+          code: resourceRealm
+          data_type: string
+          required: true
+          value_list:
+            - iot-naeel
+            - k8s-3-sandbox-nubes-ru
+            - k8s-4-sandbox-nubes-ru
+          func: getAvailableResourceRealms
+          descr: Выбрать платформу из списка
+          sort: 10
+        - id: 551
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: true
+          default: "512"
+          minvalue: 512
+          descr: 'Пример: `1024`'
+          sort: 20
+        - id: 552
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: true
+          default: "500"
+          minvalue: 500
+          descr: 'Пример: `1000`'
+          sort: 30
+        - id: 553
+          code: domain
+          data_type: string
+          required: true
+          regex: ^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
+          descr: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          sort: 40
+        - id: 554
+          code: resourceInstances
+          data_type: integer &gt; 0
+          required: true
+          default: "1"
+          minvalue: 1
+          sort: 11
+        - id: 555
+          code: kafkaUid
+          data_type: uuid
+          required: true
+          ref_svc_id: 116
+          descr: Выбрать кластер из списка
+          sort: 5
+          is_modifiable: true
+    - name: delete
+      id: 176
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 180
+      kind: instance
+      action: modify
+      params:
+        - id: 565
+          code: kafkaUid
+          data_type: uuid
+          required: true
+          ref_svc_id: 116
+          descr: Выбрать кластер из списка
+    - name: resume
+      id: 178
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 177
+      kind: instance
+      action: suspend
+      params: []

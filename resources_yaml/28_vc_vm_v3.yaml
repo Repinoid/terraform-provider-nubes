@@ -1,0 +1,346 @@
+name: vc_vm_v3
+service_id: 28
+service_display_name: Виртуальная машина
+service_short_name: vc_vm_v3
+service_man: '# Документация по разворачиванию ВМ в Личном кабинете<br/><br/>Данный сервис позволяет разворачивать виртуальные машины (ВМ) непосредственно из Личного кабинета (ЛК).<br/><br/>## Доступные операции<br/>- **create** — Создание виртуальной машины<br/>- **delete** — Удаление виртуальной машины<br/>- **resume** — Запуск виртуальной машины<br/>- **suspend** — Остановка виртуальной машины<br/><br/>---<br/><br/>## Параметры для развёртывания ВМ<br/><br/>### Обязательные параметры:<br/><br/>**vappUid**<br/>UUID vApp, в которой будет создаваться виртуальная машина.<br/>*Пример: WZ00400*<br/><br/>**vmName**<br/>Уникальное имя виртуальной машины.<br/>*Пример: test-vm*<br/><br/>**vmCpu**<br/>Количество ядер процессора. Должно быть больше 0.<br/>*Пример: 1*<br/><br/>**vmRam**<br/>Объем оперативной памяти в гигабайтах. Должно быть больше 0.<br/>*Пример: 1*<br/><br/><br/>**accessPortList**<br/>Белый список портов для доступа к виртуальной машине извне в формате JSON.<br/>*Пример: [&quot;22&quot;,&quot;10050]*<br/><br/>**imageVm**<br/>Образ операционной системы для развёртывания.<br/>*Доступные значения: RockyLinux_9-16G-cloudinit, Ubuntu_22-20G, Debian_13-20G*<br/><br/>**userLogin**<br/>Логин пользователя для SSH-доступа.<br/>*По умолчанию: myuser*<br/><br/>**userPublicKey**<br/>Публичный SSH-ключ пользователя в формате OpenSSH.<br/>*Пример: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...*<br/><br/>**needAddZabbixTemplate**<br/>Значение истина\ложь, определяющее будет ли добавлен хост в zabbix.<br/>*Пример: true*<br/><br/>### Опциональные параметры:<br/><br/>**accessIpList**<br/>Белый список IP-адресов для доступа к виртуальной машине в формате JSON. Если оставить пустым, вм будет доступена со всех адресов.<br/>*Пример: [&quot;192.168.1.1&quot;, &quot;10.0.0.5&quot;]*<br/><br/>**vmDisk**<br/>Размер дополнительного диска в гигабайтах. Должно быть больше 0.<br/>*Пример: 50*<br/><br/>**ipSpaceName**<br/>Внешний IP-адрес. Если не требуется — укажите значение &quot;no-needed&quot; (В нем не будет работать сбор метрик zabbix). <br/><br/>**cloudInit**<br/>YAML-скрипт для кастомизации системы через cloud-init.<br/><br/>---<br/><br/>## Доступные образы операционных систем<br/><br/>### RockyLinux_9-16G-cloudinit<br/>Базовый образ на основе Rocky Linux 9 (Rocky-9.6-x86_64-minimal) для серверных задач.<br/>- Размер системного диска: 16 ГБ<br/>- Поддержка cloud-init<br/>- Минимальные требования: 1 vCPU, 1 ГБ RAM<br/><br/>### Ubuntu_22-20G<br/>Образ на основе Ubuntu Server 22.04 LTS для облачного окружения.<br/>- Размер системного диска: 20 ГБ<br/>- Поддержка cloud-init<br/>- Минимальные требования: 1 vCPU, 1 ГБ RAM<br/><br/>### Debian_13-20G<br/>Образ на основе Debian 13 (Trixie) для стабильной серверной работы.<br/>- Размер системного диска: 20 ГБ<br/>- Поддержка cloud-init<br/>- Минимальные требования: 1 vCPU, 1 ГБ RAM<br/><br/>---<br/><br/>## Пример использования Cloud-init<br/><br/>```yaml<br/>users:<br/>  - name: myuser<br/>    sudo: ALL=(ALL) NOPASSWD:ALL<br/>    groups: sudo<br/>    shell: /bin/bash<br/>    ssh-authorized-keys:<br/>      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...<br/><br/>packages:<br/>  - nginx<br/><br/>runcmd:<br/>  - systemctl enable --now nginx<br/>  - systemctl restart nginx<br/>```<br/><br/>---<br/><br/>## Результат выполнения<br/><br/>После успешного развёртывания в Личном кабинете появится новая виртуальная машина с заданными характеристиками. SSH-доступ осуществляется с использованием указанных логина и публичного ключа.<br/><br/>---<br/><br/>## Важные примечания<br/><br/>### Особенности работы:<br/>- Для отключения внешнего IP укажите значение &quot;no-needed&quot; в параметре ipSpaceName<br/>- Параметр cloudInit является опциональным<br/><br/>### Ограничения:<br/>- Не рекомендуется использовать продолжительные инструкции в cloud-init (таймаут 5 минут)<br/>- Не поддерживается запись файлов через cloud-init<br/>- Не реализовано создание резервных копий ВМ<br/><br/>---<br/><br/>## Диагностика проблем с cloud-init<br/><br/>### Основной лог-файл:<br/>```bash<br/>/var/log/cloud-init.log<br/>```<br/><br/>### Пакет не устанавливается:<br/>- Проверьте доступность пакета в репозитории<br/>- Убедитесь в правильности написания имени пакета<br/>- Попробуйте установить вручную: `apt install &lt;имя_пакета&gt;` (Debian/Ubuntu) или `dnf install &lt;имя_пакета&gt;` (Rocky Linux)<br/><br/>### Команда не выполняется:<br/>- Проверьте наличие требуемой утилиты в системе<br/>- Убедитесь в правильности синтаксиса команды<br/>- Попробуйте выполнить команду вручную для диагностики'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 132
+      kind: instance
+      action: create
+      man: '# Документация по использованию услуги развёртывания ВМ в Личном кабинете<br/><br/>Данный сервис позволяет разворачивать виртуальные машины (ВМ) непосредственно из Личного кабинета (ЛК).<br/><br/>## Доступные операции<br/>- **create** — Создание виртуальной машины<br/>- **delete** — Удаление виртуальной машины<br/>- **resume** — Запуск виртуальной машины<br/>- **suspend** — Остановка виртуальной машины<br/><br/>---<br/><br/>## Параметры для развёртывания ВМ<br/><br/>### Обязательные параметры:<br/><br/>**vappUid**<br/>UUID vApp, в которой будет создаваться виртуальная машина.<br/>*Пример: WZ00400*<br/><br/>**vmName**<br/>Уникальное имя виртуальной машины.<br/>*Пример: test-vm*<br/><br/>**vmCpu**<br/>Количество ядер процессора. Должно быть больше 0.<br/>*Пример: 1*<br/><br/>**vmRam**<br/>Объем оперативной памяти в гигабайтах. Должно быть больше 0.<br/>*Пример: 1*<br/><br/><br/>**accessPortList**<br/>Белый список портов для доступа к виртуальной машине извне в формате JSON.<br/>*Пример: [&quot;22&quot;,&quot;10050]*<br/><br/>**imageVm**<br/>Образ операционной системы для развёртывания.<br/>*Доступные значения: RockyLinux_9-16G-cloudinit, Ubuntu_22-20G, Debian_13-20G*<br/><br/>**userLogin**<br/>Логин пользователя для SSH-доступа.<br/>*По умолчанию: myuser*<br/><br/>**userPublicKey**<br/>Публичный SSH-ключ пользователя в формате OpenSSH.<br/>*Пример: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...*<br/><br/>**needAddZabbixTemplate**<br/>Значение истина\лож определяющее будет ли добавлен хост в zabbix.<br/>*Пример: true*<br/><br/>### Опциональные параметры:<br/><br/>**accessIpList**<br/>Белый список IP-адресов для доступа к виртуальной машине в формате JSON. Если оставить пустым, вм будет доступена со всех адресов.<br/>*Пример: [&quot;192.168.1.1&quot;, &quot;10.0.0.5&quot;]*<br/><br/>**vmDisk**<br/>Размер дополнительного диска в гигабайтах. Должно быть больше 0.<br/>*Пример: 50*<br/><br/>**ipSpaceName**<br/>Внешний IP-адрес. Если не требуется — укажите значение &quot;no-needed&quot;.<br/><br/>**cloudInit**<br/>YAML-скрипт для кастомизации системы через cloud-init.<br/><br/>---<br/><br/>## Доступные образы операционных систем<br/><br/>### RockyLinux_9-16G-cloudinit<br/>Базовый образ на основе Rocky Linux 9 (Rocky-9.6-x86_64-minimal) для серверных задач.<br/>- Размер системного диска: 16 ГБ<br/>- Поддержка cloud-init<br/>- Минимальные требования: 1 vCPU, 1 ГБ RAM<br/><br/>### Ubuntu_22-20G<br/>Образ на основе Ubuntu Server 22.04 LTS для облачного окружения.<br/>- Размер системного диска: 20 ГБ<br/>- Поддержка cloud-init<br/>- Минимальные требования: 1 vCPU, 1 ГБ RAM<br/><br/>### Debian_13-20G<br/>Образ на основе Debian 13 (Trixie) для стабильной серверной работы.<br/>- Размер системного диска: 20 ГБ<br/>- Поддержка cloud-init<br/>- Минимальные требования: 1 vCPU, 1 ГБ RAM<br/><br/>---<br/><br/>## Пример использования Cloud-init<br/><br/>```yaml<br/>users:<br/>  - name: myuser<br/>    sudo: ALL=(ALL) NOPASSWD:ALL<br/>    groups: sudo<br/>    shell: /bin/bash<br/>    ssh-authorized-keys:<br/>      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC...<br/><br/>packages:<br/>  - nginx<br/><br/>runcmd:<br/>  - systemctl enable --now nginx<br/>  - systemctl restart nginx<br/>```<br/><br/>---<br/><br/>## Результат выполнения<br/><br/>После успешного развёртывания в Личном кабинете появится новая виртуальная машина с заданными характеристиками. SSH-доступ осуществляется с использованием указанных логина и публичного ключа.<br/><br/>---<br/><br/>## Важные примечания<br/><br/>### Особенности работы:<br/>- Для отключения внешнего IP укажите значение &quot;no-needed&quot; в параметре ipSpaceName<br/>- Параметр cloudInit является опциональным<br/><br/>### Ограничения:<br/>- Не рекомендуется использовать продолжительные инструкции в cloud-init (таймаут 5 минут)<br/>- Не поддерживается запись файлов через cloud-init<br/>- Не реализовано создание резервных копий ВМ<br/><br/>---<br/><br/>## Диагностика проблем с cloud-init<br/><br/>### Основной лог-файл:<br/>```bash<br/>/var/log/cloud-init.log<br/>```<br/><br/>### Пакет не устанавливается:<br/>- Проверьте доступность пакета в репозитории<br/>- Убедитесь в правильности написания имени пакета<br/>- Попробуйте установить вручную: `apt install &lt;имя_пакета&gt;` (Debian/Ubuntu) или `dnf install &lt;имя_пакета&gt;` (Rocky Linux)<br/><br/>### Команда не выполняется:<br/>- Проверьте наличие требуемой утилиты в системе<br/>- Убедитесь в правильности синтаксиса команды<br/>- Попробуйте выполнить команду вручную для диагностики'
+      params:
+        - id: 407
+          code: vappUid
+          data_type: uuid
+          required: true
+          ref_svc_id: 26
+          sort: 10
+        - id: 408
+          code: vmName
+          data_type: string
+          required: true
+          default: web01
+          regex: ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$
+          sort: 20
+        - id: 409
+          code: vmCpu
+          data_type: integer &gt; 0
+          required: true
+          default: "1"
+          maxvalue: 64
+          minvalue: 1
+          descr: шт
+          sort: 30
+          is_modifiable: true
+        - id: 410
+          code: vmRam
+          data_type: integer &gt; 0
+          required: true
+          default: "1"
+          maxvalue: 256
+          minvalue: 1
+          descr: Gb
+          sort: 40
+          is_modifiable: true
+        - id: 411
+          code: vmDisk
+          data_type: integer &gt; 0
+          required: false
+          regex: ^(?:$|(?:0|[1-9]\d{0,2}|1\d{3}|20(?:[0-3]\d|4[0-8])))$
+          man: Основной диск у vm зависит от образа (см. документацию)<br/>Если необходимо дополнительное место для vm, введите колличество Gb в эту форму
+          sort: 50
+          is_modifiable: true
+        - id: 412
+          code: ipSpaceName
+          data_type: string
+          required: true
+          sort: 60
+          depends_on: vappUid
+          is_modifiable: true
+        - id: 413
+          code: accessIpList
+          data_type: array
+          required: false
+          default: '["0.0.0.0/0"]'
+          regex: ^\[("[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?"\s*,\s*)*"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?"\]$
+          man: Формат массива<br/>Каким адресам будет предоставлен доступ до вм<br/><br/>Требует выделенного внешнего IP<br/>Если ничего не передано, то выставлено [&quot;0.0.0.0/0&quot;]
+          sort: 70
+          is_modifiable: true
+        - id: 414
+          code: imageVm
+          data_type: string
+          required: true
+          sort: 90
+          depends_on: vappUid
+        - id: 415
+          code: cloudInit
+          data_type: yaml
+          required: false
+          man: 'Формат файла cloud-init<br/>```<br/>#cloud-config<br/><br/>manage_etc_hosts: true<br/>package_update: true<br/>```<br/><br/>Если будут указана установка пакетов/прочего, доступ к ВМ **может быть предоставлен раньше чем выполнится cloud-init**'
+          sort: 200
+        - id: 416
+          code: userLogin
+          required: true
+          default: myuser
+          man: Учётка SSH
+          sort: 180
+        - id: 417
+          code: userPublicKey
+          data_type: string
+          required: true
+          man: Публичная часть SSH-Ключа для пользователя<br/>```<br/>$ ssh-keygen <br/>$ cat ~/.ssh/id_ed25519.pub<br/>```<br/><br/>
+          sort: 190
+        - id: 448
+          code: accessPortList
+          data_type: array-map-fixed
+          required: true
+          default: '[{"port": "22", "type": "tcp"}, {"port": "10050", "type": "tcp"}]'
+          man: Формат следующий:<br/>- **22/tcp** - доступ только для 22 по **tcp**<br/>- **53/udp** - доступ только для 53 по **udp**<br/>- **80/all** - доступ для 80 по **tcp/udp**<br/><br/>Формат массива:<br/>- [{&quot;port&quot;:&quot;22&quot;,&quot;type&quot;:&quot;all&quot;}]
+          sort: 80
+          is_modifiable: true
+          sub_params:
+            - id: 682
+              code: port
+              data_type: string
+              required: true
+              default: "22"
+              is_modifiable: false
+            - id: 683
+              code: type
+              data_type: string
+              required: true
+              default: all
+              value_list:
+                - tcp
+                - udp
+                - all
+              is_modifiable: false
+        - id: 1118
+          code: sameSnat
+          data_type: boolean
+          required: false
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          man: Если выставить **false**, приложение будет опубликовано за общим SNAT<br/>Если выставить **true**, приложение будет опубликовано за внешним IP, который будет создан в процессе разворачивания услуги<br/><br/>Если выставить **true** - общий SNAT становится необязательным
+          sort: 65
+          is_modifiable: true
+    - name: delete
+      id: 133
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 159
+      kind: instance
+      action: modify
+      params:
+        - id: 493
+          code: vmCpu
+          data_type: integer &gt; 0
+          required: false
+          maxvalue: 64
+          minvalue: 1
+          descr: шт
+          sort: 20
+        - id: 494
+          code: vmRam
+          data_type: integer &gt; 0
+          required: false
+          maxvalue: 256
+          minvalue: 1
+          descr: Gb
+          sort: 30
+        - id: 495
+          code: vmDisk
+          data_type: integer &gt; 0
+          required: false
+          regex: ^(?:$|(?:0|[1-9]\d{0,2}|1\d{3}|20(?:[0-3]\d|4[0-8])))$
+          descr: Основной диск у vm зависит от образа (см. документацию)<br/>Если необходимо дополнительное место для vm, введите колличество Gb в эту форму
+          sort: 40
+        - id: 496
+          code: ipSpaceName
+          data_type: string
+          required: false
+          sort: 50
+        - id: 497
+          code: accessIpList
+          data_type: json
+          required: false
+          regex: ^\[("[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?"\s*,\s*)*"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?"\]$
+          man: Формат массива<br/>Каким адресам будет предоставлен доступ до вм<br/><br/>Требует выделенного внешнего IP<br/>Если ничего не передано, то выставлено [&quot;0.0.0.0/0&quot;]
+          sort: 60
+        - id: 498
+          code: accessPortList
+          data_type: array-map-fixed
+          required: false
+          man: Формат следующий:<br/>- **22/tcp** - доступ только для 22 по **tcp**<br/>- **53/udp** - доступ только для 53 по **udp**<br/>- **80/all** - доступ для 80 по **tcp/udp**<br/><br/>Формат массива:<br/>- [{&quot;port&quot;:&quot;22&quot;,&quot;type&quot;:&quot;all&quot;}]
+          sort: 70
+          sub_params:
+            - id: 688
+              code: port
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 689
+              code: type
+              data_type: string
+              required: true
+              default: all
+              value_list:
+                - tcp
+                - udp
+                - all
+              is_modifiable: false
+        - id: 1119
+          code: sameSnat
+          data_type: boolean
+          required: true
+          value_list:
+            - "false"
+            - "true"
+          sort: 55
+    - name: reconcile
+      id: 286
+      kind: action
+      action: reconcile
+      params: []
+    - name: redeploy
+      id: 164
+      kind: action
+      action: redeploy
+      params:
+        - id: 509
+          code: vmName
+          data_type: string
+          required: true
+          regex: ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$
+          sort: 10
+        - id: 510
+          code: vmCpu
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 64
+          minvalue: 1
+          descr: шт
+          sort: 20
+        - id: 511
+          code: vmRam
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 256
+          minvalue: 1
+          descr: Gb
+          sort: 30
+        - id: 512
+          code: vmDisk
+          data_type: integer &gt; 0
+          required: false
+          regex: ^(?:$|(?:0|[1-9]\d{0,2}|1\d{3}|20(?:[0-3]\d|4[0-8])))$
+          descr: Основной диск у vm зависит от образа (см. документацию)<br/>Если необходимо дополнительное место для vm, введите колличество Gb в эту форму
+          sort: 40
+        - id: 513
+          code: ipSpaceName
+          data_type: string
+          required: false
+          sort: 50
+        - id: 514
+          code: accessIpList
+          data_type: json
+          required: false
+          regex: ^\[("[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?"\s*,\s*)*"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}(/[0-9]{1,2})?"\]$
+          man: Формат массива<br/>Каким адресам будет предоставлен доступ до вм<br/><br/>Требует выделенного внешнего IP<br/>Если ничего не передано, то выставлено [&quot;0.0.0.0/0&quot;]
+          sort: 60
+        - id: 515
+          code: imageVm
+          data_type: string
+          required: true
+          value_list:
+            - RockyLinux_9-16G-cloudinit
+            - Ubuntu_22-20G
+            - Debian_13-20G
+          sort: 80
+        - id: 516
+          code: userLogin
+          data_type: string
+          required: true
+          descr: Учётка SSH
+          sort: 180
+        - id: 517
+          code: userPublicKey
+          data_type: string
+          required: true
+          descr: Публичная часть SSH-Ключа для пользователя
+          sort: 190
+        - id: 518
+          code: cloudInit
+          data_type: yaml
+          required: false
+          descr: Можно передать создание дополнительных пользователей.<br/>На текущий момент не реализовано выполнения в cloud-init, установки пакетов, выполнения команд и записи файлов.
+          sort: 200
+        - id: 520
+          code: accessPortList
+          data_type: array-map-fixed
+          required: false
+          man: Формат следующий:<br/>- **22/tcp** - доступ только для 22 по **tcp**<br/>- **53/udp** - доступ только для 53 по **udp**<br/>- **80/all** - доступ для 80 по **tcp/udp**<br/><br/>Формат массива:<br/>- [{&quot;port&quot;:&quot;22&quot;,&quot;type&quot;:&quot;all&quot;}]
+          sort: 70
+          sub_params:
+            - id: 690
+              code: port
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 691
+              code: type
+              data_type: string
+              required: true
+              default: all
+              value_list:
+                - tcp
+                - udp
+                - all
+              is_modifiable: false
+        - id: 1123
+          code: sameSnat
+          data_type: boolean
+          required: true
+          value_list:
+            - "false"
+            - "true"
+          sort: 55
+    - name: resume
+      id: 135
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 134
+      kind: instance
+      action: suspend
+      params: []

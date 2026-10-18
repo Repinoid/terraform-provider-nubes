@@ -1,0 +1,108 @@
+name: superset
+service_id: 81
+service_display_name: Apache Superset
+service_short_name: superset
+service_man: 'Apache Superset как сервис. <br/>Ресурсная платформа: k8s. <br/>Автоматизация: k8s operator.<br/>Авторизация: 2FA keycloak (для доменного логина @mgmt.nubes.ru)'
+lifecycle:
+    suspend_on_destroy_default: false
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 12
+      kind: instance
+      action: create
+      man: DEV-Ветка сборки Superset
+      params:
+        - id: 14
+          code: domain
+          data_type: string
+          required: true
+          default: superset-1
+          regex: ^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
+          descr: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          man: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          sort: 10
+        - id: 20
+          code: emails
+          data_type: string
+          required: true
+          default: testuser1
+          descr: Учётная запись, которой будут выданы админские права. В формате email [ну не совсем. Для доменных учетных записей - без доменного суффикса]. Обязана находиться в Keycloak. Можно передавать несколько через пробел
+          man: Учётная запись, которой будут выданы админские права. В формате email [ну не совсем. Для доменных учетных записей - без доменного суффикса]. Обязана находиться в Keycloak. Можно передавать несколько через пробел
+          sort: 70
+        - id: 96
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: true
+          default: "500"
+          maxvalue: 4000
+          minvalue: 100
+          descr: Квота ядра пода (Указывается в mili). 1000 Mili = 1 ядро
+          man: Квота ядра пода (Указывается в mili). 1000 Mili = 1 ядро
+          sort: 30
+        - id: 97
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: true
+          default: "512"
+          maxvalue: 8192
+          minvalue: 128
+          descr: Квота памяти пода (Указывается в Megabytes)
+          man: Квота памяти пода (Указывается в Megabytes)
+          sort: 40
+        - id: 98
+          code: resourceDisk
+          data_type: integer &gt; 0
+          required: true
+          default: "1"
+          maxvalue: 999
+          minvalue: 1
+          descr: Квота диска (Указывается в GIGAbytes)
+          man: Квота диска (Указывается в GIGAbytes)
+          sort: 50
+        - id: 109
+          code: resourceRealm
+          data_type: string
+          required: true
+          value_list:
+            - iot-naeel
+            - k8s-3-sandbox-nubes-ru
+            - k8s-4-sandbox-nubes-ru
+          func: getAvailableResourceRealms
+          descr: Платформа для развертывания
+          man: Наименование кластера Kubernetes для подключения
+          sort: 20
+        - id: 227
+          code: resourceInstances
+          data_type: integer &gt; 0
+          required: true
+          default: "1"
+          maxvalue: 7
+          minvalue: 1
+          descr: Количество узлов
+          sort: 60
+    - name: delete
+      id: 13
+      kind: instance
+      action: delete
+      man: DEV-Ветка удаления Superset
+      params: []

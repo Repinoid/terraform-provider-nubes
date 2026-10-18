@@ -1,0 +1,166 @@
+name: pgadmin
+service_id: 96
+service_display_name: pgAdmin
+service_short_name: pgadmin
+service_man: Инструмент с графическим интерфейсом для управления базами данных PostgreSQL
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 62
+      kind: instance
+      action: create
+      params:
+        - id: 164
+          code: domain
+          data_type: string
+          required: true
+          default: pgadmin-1
+          regex: ^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
+          unique_scope: provider
+          descr: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          man: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          sort: 10
+        - id: 165
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: true
+          default: "500"
+          maxvalue: 4000
+          minvalue: 500
+          descr: Квота ядра пода (milicores). 1000Mili = 1 Ядро
+          man: Квота ядра пода (milicores). 1000Mili = 1 Ядро
+          sort: 30
+          is_modifiable: true
+        - id: 166
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: true
+          default: "512"
+          maxvalue: 8192
+          minvalue: 512
+          descr: Квота памяти пода (MBytes)
+          man: Квота памяти пода (MBytes)
+          sort: 40
+          is_modifiable: true
+        - id: 167
+          code: resourceDisk
+          data_type: integer &gt; 0
+          required: true
+          default: "1"
+          maxvalue: 999
+          minvalue: 1
+          descr: Квота диска (Указывается в GIGAbytes)
+          man: Квота диска (Указывается в GIGAbytes)
+          sort: 50
+          is_modifiable: true
+        - id: 169
+          code: resourceRealm
+          data_type: string
+          required: true
+          value_list:
+            - iot-naeel
+            - k8s-3-sandbox-nubes-ru
+            - k8s-4-sandbox-nubes-ru
+          func: getAvailableResourceRealms
+          descr: Платформа для развертывания
+          man: Наименование кластера Kubernetes для подключения
+          sort: 20
+        - id: 170
+          code: login
+          data_type: string
+          required: true
+          regex: ^([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)$
+          maxlength: 255
+          minlength: 3
+          descr: Логин для подключения к pgAdmin, в формате email (login@email.net)
+          man: Логин для подключения к pgAdmin, в формате email (login@email.net)
+          sort: 60
+        - id: 171
+          code: password
+          data_type: string
+          required: true
+          descr: Пароль для подключения к pgAdmin
+          man: Пароль для подключения к pgAdmin
+          sort: 70
+          is_sensitive: true
+    - name: delete
+      id: 63
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 64
+      kind: instance
+      action: modify
+      params:
+        - id: 172
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: false
+          maxvalue: 4000
+          minvalue: 100
+          descr: Квота ядра пода (Указывается в mili). 1000Mili = 1 Ядро
+          man: Квота ядра пода (Указывается в mili). 1000Mili = 1 Ядро
+        - id: 173
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: false
+          maxvalue: 8192
+          minvalue: 128
+          descr: Квота памяти пода (MBytes)
+          man: Квота памяти пода (MBytes)
+        - id: 174
+          code: resourceDisk
+          data_type: integer &gt; 0
+          required: false
+          default: "1"
+          maxvalue: 999
+          minvalue: 1
+          descr: Квота диска (Указывается в GIGAbytes)
+          man: Квота диска (Указывается в GIGAbytes)
+    - name: redeploy
+      id: 65
+      kind: action
+      action: redeploy
+      params:
+        - id: 277
+          code: resourceRealm
+          data_type: string
+          required: true
+          value_list:
+            - iot-naeel
+            - k8s-3-sandbox-nubes-ru
+            - k8s-4-sandbox-nubes-ru
+          func: getAvailableResourceRealms
+          descr: Платформа для развертывания
+    - name: resume
+      id: 123
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 122
+      kind: instance
+      action: suspend
+      params: []

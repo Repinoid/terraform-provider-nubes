@@ -1,0 +1,223 @@
+name: template
+service_id: 2
+service_display_name: Темплейт k8s
+service_short_name: template
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 74
+      kind: instance
+      action: create
+      params:
+        - id: 813
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          is_modifiable: true
+          sub_params:
+            - id: 172
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "100"
+              is_modifiable: false
+            - id: 173
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "128"
+              is_modifiable: false
+            - id: 174
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              is_modifiable: false
+            - id: 175
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: "5"
+              is_modifiable: false
+        - id: 814
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 176
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - iot-naeel
+                - k8s-3-sandbox-nubes-ru
+                - k8s-4-sandbox-nubes-ru
+              is_modifiable: false
+        - id: 815
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          is_modifiable: true
+          sub_params:
+            - id: 177
+              code: type
+              data_type: string
+              required: true
+              default: ingress
+              value_list:
+                - ingress
+                - service
+              is_modifiable: false
+            - id: 178
+              code: domain
+              data_type: string
+              required: true
+              default: abracadabra-vf8btwxu
+              regex: (?=^.{1,63}$)^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
+              is_modifiable: false
+            - id: 179
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 180
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              is_modifiable: false
+            - id: 181
+              code: slaveIpSpace
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 182
+              code: slaveAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              is_modifiable: false
+    - name: delete
+      id: 75
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 76
+      kind: instance
+      action: modify
+      params:
+        - id: 816
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sub_params:
+            - id: 183
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 184
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 185
+              code: disk
+              data_type: integer &gt;= 0
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 186
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+        - id: 817
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sub_params:
+            - id: 187
+              code: type
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - ingress
+                - service
+              is_modifiable: false
+            - id: 188
+              code: domain
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 189
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 190
+              code: slaveIpSpace
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 191
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 192
+              code: slaveAccessList
+              data_type: json
+              required: true
+              default: ""
+              is_modifiable: false
+    - name: reconcile
+      id: 298
+      kind: action
+      action: reconcile
+      params: []
+    - name: resume
+      id: 98
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 97
+      kind: instance
+      action: suspend
+      params: []

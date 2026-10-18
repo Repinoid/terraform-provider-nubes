@@ -1,0 +1,336 @@
+name: kafka
+service_id: 116
+service_display_name: ApacheKafka
+service_short_name: kafka
+service_man: "# Инструкция по развертыванию Apache Kafka через платформу<br/><br/>---<br/>## 1. Общая информация<br/>Брокер сообщений Apache Kafka — это отказоустойчивая распределённая платформа для обмена сообщениями и потоковой обработки данных в реальном времени.<br/>Позволяет надёжно передавать события между сервисами и системами, интегрироваться с внешними решениями и использовать как внутренние, так и защищённые TLS-подключения. Развёртывание полностью автоматизировано платформой.<br/><br/>## Доступные операции<br/>- **create**    — Создание кластера<br/>- **delete**    — Удаление кластера<br/>- **suspend**   — Остановка кластера<br/>- **resume**    — Запуск кластера<br/><br/>- **create_topic**    — Создание топика<br/>- **modify_topic**    — Модификация топика<br/>- **delete_topic**    — Удаление топика<br/><br/>- **create_user**    — Создание пользователя<br/>- **modify_user**    — Модификация пользователя<br/>- **delete_user**    — Удаление пользователя<br/><br/><br/>---<br/>## 2. Параметры развертывания кластера<br/>Ниже перечислены параметры, которые необходимо указать при создании ресурса Kafka:<br/><br/>* **Платформа для развертывания:**<br/>  Платформа для развертывания (среда, в которой будет развернут кластер). Пример: `\tk8s-3.ext.nubes.ru`.<br/><br/>* **Количество узлов в сети:**<br/>  Количество узлов (брокеров) в кластере Kafka<br/><br/>* **Квота (megabyte) памяти пода:**<br/>  Квота памяти пода в мегабайтах. Пример: `2048`<br/><br/>* **Квота (millicore ) ядра пода:**<br/>  Квота CPU пода в миликорах (1000 mCPU = 1 vCPU). Пример: `1000`<br/><br/>* **Размер (gigabyte) диска для базы данных:**<br/>  Размер диска для хранения данных в гигабайтах. Пример: `20`<br/><br/>* **Выделяет внешний IP для доступа к master:**<br/>  Флаг, определяющий, нужно ли выделять внешний IP для доступа к master-брокеру. Пример: `true` или `false`<br/><br/>* **Имя ipSpace для публикации внешнего IP**<br/>  Если включен предыдущий параметр, то поле необходимо заполнить. Пример: `internet-no-antiddos-v1`<br/><br/>---<br/>## 4. Выходные параметры<br/>После успешного развертывания ресурса Kafka платформа возвращает ряд параметров.<br/>Ключевыми из них являются:<br/><br/>**internalConnect** (выдаётся только при работе кластера по внутренним адресам)<br/>Внутренние эндпоинты для подключения из сервисов, развёрнутых внутри того же Kubernetes-кластера.<br/>```yaml<br/>internalConnect:<br/>  bootstrap:<br/>    fqdn: &quot;&lt;serviceName&gt;-kafka-tls-bootstrap.&lt;namespace&gt;.svc.&lt;clusterDomain&gt;&quot;<br/>    port: 9093<br/>  brokers:<br/>    broker-1:<br/>      fqdn: &quot;&lt;serviceName&gt;-&lt;serviceName&gt;-pool-0.&lt;serviceName&gt;-kafka-brokers.&lt;namespace&gt;.svc.&lt;clusterDomain&gt;&quot;<br/>      port: 9093<br/>```<br/><br/>**externalConnect** (выдаётся только при выделении внешнего IP)<br/>Внешние эндпоинты, зарегистрированные в DNS.<br/>```yaml<br/>externalConnect:<br/>  bootstrap:<br/>    fqdn: &quot;bootstrap.&lt;namespace&gt;.&lt;dnsZone&gt;&quot;<br/>    port: 9093<br/>  brokers:<br/>    broker-1:<br/>      fqdn: &quot;broker-1.&lt;namespace&gt;.&lt;dnsZone&gt;&quot;<br/>      port: 9093<br/>```<br/><br/>Заполняется **только один** из параметров:<br/>- при внешней аллокации (`loadbalancer`) — `externalConnect`, `internalConnect` остаётся пустым;<br/>- при внутреннем режиме — `internalConnect`, `externalConnect` остаётся пустым.<br/><br/>Для подключения используются следующие порты:<br/><br/>* 9092 — внутренний нешифрованный доступ (plain).<br/>* 9093 — внутренний и внешний доступ по TLS, с обязательной TLS-аутентификацией.<br/><br/>---<br/>## 5. Дополнительная информация<br/>Для создания топиков, пользователей и управления ими, а также для интеграции с кластерами Kafka используйте соответствующие сервисы и раздел &quot;Облачные сервисы&quot;.<br/>---"
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 148
+      kind: instance
+      action: create
+      params:
+        - id: 1084
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 579
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - iot-naeel
+                - k8s-3-sandbox-nubes-ru
+                - k8s-4-sandbox-nubes-ru
+              man: Кластер Kubernetes, на котором будет развернут экземпляр
+              is_modifiable: false
+        - id: 1085
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          is_modifiable: true
+          sub_params:
+            - id: 580
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "2000"
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 581
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "2048"
+              is_modifiable: false
+            - id: 582
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+            - id: 583
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              is_modifiable: false
+        - id: 1086
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          is_modifiable: true
+          sub_params:
+            - id: 584
+              code: allocationExternal
+              data_type: boolean
+              required: true
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              is_modifiable: false
+            - id: 585
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+    - name: create_topic
+      id: 165
+      kind: subresource
+      action: create
+      subresource: topic
+      man: '# Инструкция по управлению топиками Apache Kafka через платформу<br/><br/>## 1. Общая информация<br/><br/>---<br/><br/>Топик — это основная сущность в Apache Kafka, предназначенная для приёма сообщений от продюсеров и передачи их консюмерам.<br/>Платформа позволяет создавать, удалять и изменять параметры топиков без прямого доступа к брокерам, обеспечивая удобное управление через интерфейс или API.<br/><br/>---<br/><br/>## Доступные операции<br/><br/>- **create_topic**    — Создание топика<br/>- **modify_topic**    — Модификация топика<br/>- **delete_topic**    — Удаление топика<br/><br/>---<br/><br/>## 2. Параметры создания топика<br/><br/>Ниже перечислены параметры, которые необходимо указать при создании нового топика:<br/><br/>* **Имя топика**<br/>  Название топика.<br/>  Должно быть уникальным в пределах кластера.<br/>  Пример: `orders-events`.<br/><br/>* **Партиции**<br/>  Количество партиций топика.<br/>  Рекомендуется выбирать с учётом уровня параллелизма потребителей и предполагаемой нагрузки.<br/>  Пример: `6`. Здесь важно рассказать о том как происходит расчет оптимального количества<br/>  Обратите внимание: уменьшить количество партиций после создания невозможно, поэтому лучше закладывать небольшой запас на будущий рост нагрузки.<br/><br/>* **Реплики**<br/>  Количество реплик для каждой партиции.<br/>  Обычно равно количеству доступных брокеров или меньше.<br/>  Пример: `3`.<br/><br/><br/>---<br/><br/>## 4. Параметры модификации топика<br/><br/>Для уже существующих топиков можно изменять параметры. Все параметры являются опциональными:<br/><br/>* **Имя топика**<br/>  Название топика.<br/>  Пример: `orders-events`.<br/><br/>* **Партиции**<br/>  Новое количество партиций.<br/>  Пример: `12`.<br/><br/>* **Реплики**<br/>  Новое количество реплик.<br/>  Пример: `2`.<br/><br/>---<br/><br/>## 5. Рекомендации<br/><br/>* Планируйте количество партиций с запасом — уменьшение их числа невозможно.<br/>* Количество реплик должно соответствовать требуемому уровню отказоустойчивости, но не превышать количество брокеров.<br/>* Изменение параметров топика в рабочем окружении может временно влиять на производительность. Рекомендуется проводить крупные изменения в периоды минимальной нагрузки.<br/><br/>---'
+      params:
+        - id: 523
+          code: nameTopic
+          data_type: string
+          required: true
+          descr: 'Пример: `orders-events`'
+          sort: 10
+        - id: 524
+          code: partitions
+          data_type: integer &gt; 0
+          required: true
+          descr: Число партиций можно увеличить, но уменьшить их нельзя.
+        - id: 525
+          code: replicas
+          data_type: integer &gt; 0
+          required: true
+          descr: Количество реплик не может привышать количество реплик брокера
+          sort: 20
+    - name: create_user
+      id: 168
+      kind: subresource
+      action: create
+      subresource: user
+      man: '# Инструкция по управлению пользователями Apache Kafka.<br/><br/>---<br/><br/>## 1. Общая информация<br/><br/>Пользователи в Apache Kafka используются для аутентификации и авторизации при подключении к кластеру.<br/>Платформа позволяет создавать, удалять и изменять пользователей без прямого доступа к брокерам, а также настраивать права доступа к топикам и группам.<br/>Это обеспечивает централизованное и безопасное управление доступом к ресурсам Kafka.<br/><br/>---<br/><br/>## Доступные операции<br/><br/>- **create_user**    — Создание пользователя<br/>- **modify_user**    — Модификация пользователя<br/>- **delete_user**    — Удаление пользователя<br/><br/>---<br/><br/>## 2. Параметры создания пользователя<br/><br/>Ниже перечислены параметры, которые необходимо указать при создании нового пользователя:<br/><br/>* **Имя пользователя**<br/>  Имя создаваемого пользователя. Используется для подключения к Kafka и настройки прав.<br/>  Пример: `username-admin`<br/><br/>* **Топик**<br/>  Название топика, к которому будут назначены права для данного пользователя.<br/>  Пример: `orders-events`.<br/>  Использовать маску нельзя (`orders*`), только полное название или `*`.<br/><br/>* **Операции**<br/>  Список разрешённых операций на указанном топике.<br/>  Пример: `Describe, Read, Write`<br/><br/>* **Группа**<br/>  Имя группы, которой разрешён доступ. Используется при настройке консюмер-групп.<br/>  Пример: `order-consumers`.<br/><br/>* **Разрешённые хосты**<br/>  Список хостов или подсетей, с которых разрешено подключение пользователя.<br/>  Пример: `192.168.1.0/24` или `*`.<br/><br/>---<br/><br/>## 3. Параметры модификации пользователя<br/><br/>Ниже перечислены параметры, которые необходимо указать при модификации пользователя:<br/><br/>* **Имя пользователя**<br/>  Имя создаваемого пользователя. Используется для подключения к Kafka и настройки прав.<br/>  Пример: `username-admin`<br/><br/>* **Топик**<br/>  Название топика, к которому будут назначены права для данного пользователя.<br/>  Пример: `orders-events`.<br/>  Использовать маску нельзя (`orders*`), только полное название или `*`.<br/><br/>* **Операции**<br/>  Список разрешённых операций на указанном топике.<br/>  Пример: `Describe, Read, Write`<br/><br/>* **Группа**<br/>  Имя группы, которой разрешён доступ. Используется при настройке консюмер-групп.<br/>  Пример: `order-consumers`.<br/><br/>* **Разрешённые хосты**<br/>  Список хостов или подсетей, с которых разрешено подключение пользователя.<br/>  Пример: `192.168.1.0/24` или `*`.<br/><br/>---<br/><br/>## 4. Параметры удалении пользователя<br/><br/>Ниже перечислены параметры, которые необходимо указать при удалении пользователя:<br/><br/>* **Имя пользователя**<br/>  Имя удаляемого пользователя.<br/>  Пример: `username-admin`<br/><br/>## 5. Выходные параметры<br/><br/>После успешного создания пользователя платформа возвращает параметры, необходимые для подключения:<br/><br/>* **ca.crt**<br/>  Корневой сертификат (Certificate Authority), используемый для проверки подлинности сервера при TLS-подключении.<br/>  Файл содержит публичный ключ удостоверяющего центра, которому доверяют брокеры и клиенты. Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>   echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.crt<br/>   ```<br/><br/>* **ca.p12**<br/>  PKCS#12-хранилище с корневым сертификатом (Certificate Authority), используемое для проверки подлинности сервера при TLS-подключении.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.p12<br/>  ```<br/><br/>* **ca.password**<br/>  Пароль для доступа к хранилищу `ca.p12`. Выдаеться в чистом виде. Раскодировать не нужно.<br/><br/>* **user.crt**<br/>  Клиентский сертификат, подтверждающий личность пользователя при подключении к Kafka.<br/>  Используется совместно с приватным ключом `user.key` для аутентификации.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.crt<br/>  ```<br/><br/>* **user.key**<br/>  Приватный ключ пользователя, применяемый для установления защищённого TLS-соединения и подтверждения подлинности.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.key<br/>  ```<br/><br/>* **user.p12**<br/>  PKCS#12-хранилище с клиентским сертификатом и приватным ключом, предназначенное для аутентификации пользователя в Kafka.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo &quot;&lt;содержание поля&gt;&quot; | base64 -d &gt; &lt;название&gt;.p12<br/>  ```<br/><br/>* **user.password**<br/>  Пароль для доступа к хранилищу `user.p12`. Выдаеться в чистом виде. Раскодировать не нужно.<br/><br/>Эти параметры используются для настройки TLS-подключения.<br/><br/>---<br/><br/>## 6. Пример конфигурации клиента внутри кластера<br/><br/>Пример пода:<br/><br/>```yaml<br/>apiVersion: v1<br/>kind: Pod<br/>metadata:<br/>  name: kafka-4<br/>spec:<br/>  volumes:<br/>    - name: work<br/>      emptyDir: {}<br/>  containers:<br/>    - name: kcat<br/>      image: quay.io/strimzi/kafka:latest-kafka-4.0.0<br/>      command: [&quot;sleep&quot;, &quot;5600&quot;]<br/>      volumeMounts:<br/>        - name: work<br/>          mountPath: /work<br/>  restartPolicy: Never<br/>```<br/><br/>Создаём под и сохраняем сертификаты:<br/><br/>```bash<br/>kubectl cp user.p12 kafka-4:/work/<br/>kubectl cp ca.p12 kafka-4:/work/<br/>```<br/><br/>Создаём файлы конфигурации:<br/><br/>```bash<br/>cat &gt; /work/user-read.properties &lt;&lt;''EOF''<br/>security.protocol=SSL<br/>ssl.keystore.type=PKCS12<br/>ssl.keystore.location=/work/user.p12<br/>ssl.keystore.password=&lt;user.password&gt;<br/>ssl.truststore.type=PKCS12<br/>ssl.truststore.location=/work/ca.p12<br/>ssl.truststore.password=&lt;ca.password&gt;<br/>EOF<br/>```<br/><br/>```bash<br/>cat &gt; /work/user-write.properties &lt;&lt;''EOF''<br/>security.protocol=SSL<br/>ssl.keystore.type=PKCS12<br/>ssl.keystore.location=/work/user-write.p12<br/>ssl.keystore.password=&lt;user.password&gt;<br/>ssl.truststore.type=PKCS12<br/>ssl.truststore.location=/work/ca.p12<br/>ssl.truststore.password=&lt;ca.password&gt;<br/>EOF<br/>```<br/><br/>Листинг доступных топиков:<br/><br/>```bash<br/>/opt/kafka/bin/kafka-topics.sh \<br/>  --bootstrap-server kafkak8s-bootstrap-external:9093 \<br/>  --command-config /work/user-read.properties \<br/>  --list<br/>```<br/><br/>Запись сообщений:<br/><br/>```bash<br/>/opt/kafka/bin/kafka-console-producer.sh \<br/>  --bootstrap-server &lt;адрес сервис брокера&gt;:9093 \<br/>  --topic &lt;topic&gt; \<br/>  --producer.config /work/user-write.properties<br/>```<br/><br/>Чтение сообщений:<br/><br/>```bash<br/>/opt/kafka/bin/kafka-console-consumer.sh \<br/>  --bootstrap-server &lt;адрес сервис брокера&gt;:9093 \<br/>  --topic &lt;topic&gt; \<br/>  --from-beginning \<br/>  --group &lt;group&gt; \<br/>  --consumer.config /work/user-read.properties \<br/>  --max-messages 50<br/>```<br/><br/>---<br/><br/>## 7. Пример внешнего подключения с использованием **kcat**<br/><br/>**Листинг топиков**<br/><br/>```bash<br/>kcat -b &lt;externalConnect.bootstrap.fqdn&gt;:9093 \<br/>  -L \<br/>  -X security.protocol=SSL \<br/>  -X ssl.ca.location=./ca.crt \<br/>  -X ssl.certificate.location=./user-read.crt \<br/>  -X ssl.key.location=./user-read.key \<br/>  -X ssl.endpoint.identification.algorithm=none<br/>```<br/><br/>**Запись сообщения**<br/><br/>```bash<br/> echo &quot;hello from kcat&quot; | kcat -P \<br/>  -b &lt;externalConnect.bootstrap.fqdn&gt;:9093 \<br/>  -t write-test \<br/>  -X security.protocol=SSL \<br/>  -X ssl.ca.location=./ca.crt \<br/>  -X ssl.certificate.location=./user-write.crt \<br/>  -X ssl.key.location=./user-write.key \<br/>  -X ssl.endpoint.identification.algorithm=none<br/>```<br/><br/>**Чтение сообщений**<br/><br/>```bash<br/>kcat -C \<br/>  -b &lt;externalConnect.bootstrap.fqdn&gt;:9093 \<br/>  -t write-test \<br/>  -o beginning \<br/>  -q \<br/>  -X security.protocol=SSL \<br/>  -X ssl.ca.location=./ca.crt \<br/>  -X ssl.certificate.location=./user-read.crt \<br/>  -X ssl.key.location=./user-read.key \<br/>  -X ssl.endpoint.identification.algorithm=none<br/>```<br/><br/>---<br/><br/><br/>## 9. Рекомендации<br/><br/>* Минимизируйте набор разрешённых операций для повышения безопасности.<br/>* Используйте отдельные учётные записи для продюсеров, консюмеров и системных сервисов.<br/>* Ограничивайте доступ по IP или подсетям с помощью параметра **Разрешённые хосты**.<br/>* После изменения прав или групп пользователя рекомендуется проверить подключение и доступ к топикам.<br/><br/>---'
+      params:
+        - id: 530
+          code: username
+          data_type: string
+          required: true
+          descr: 'Пример: `username-admin`'
+        - id: 531
+          code: nameTopic
+          data_type: string
+          required: true
+          descr: 'Пример: `orders-events`. Использовать маску нельзя(`orders*`), только полное название или `*`'
+        - id: 532
+          code: operations
+          data_type: array
+          required: true
+          value_list:
+            - Create
+            - Describe
+            - Read
+            - Write
+          descr: 'Пример: `Create, Describe, Read, Write`'
+        - id: 533
+          code: group
+          data_type: string
+          required: true
+          default: '*'
+          descr: 'Пример: `order-consumers` или `*`'
+        - id: 534
+          code: accessHosts
+          data_type: string
+          required: true
+          default: '*'
+          descr: 'Пример: `192.168.1.0/24` или `*`'
+    - name: delete
+      id: 149
+      kind: instance
+      action: delete
+      params: []
+    - name: delete_topic
+      id: 167
+      kind: subresource
+      action: delete
+      subresource: topic
+      params:
+        - id: 529
+          code: nameTopic
+          data_type: string
+          required: true
+          descr: Необходимо выбрать топик, который необходимо удалить
+    - name: delete_user
+      id: 170
+      kind: subresource
+      action: delete
+      subresource: user
+      man: '# Инструкция по управлению пользователями Apache Kafka.<br/><br/>---<br/><br/>## 1. Общая информация<br/><br/>Пользователи в Apache Kafka используются для аутентификации и авторизации при подключении к кластеру.<br/>Платформа позволяет создавать, удалять и изменять пользователей без прямого доступа к брокерам, а также настраивать права доступа к топикам и группам.<br/>Это обеспечивает централизованное и безопасное управление доступом к ресурсам Kafka.<br/><br/>---<br/><br/>## Доступные операции<br/><br/>- **create_user**    — Создание пользователя<br/>- **modify_user**    — Модификация пользователя<br/>- **delete_user**    — Удаление пользователя<br/><br/>---<br/><br/>## 2. Параметры создания пользователя<br/><br/>Ниже перечислены параметры, которые необходимо указать при создании нового пользователя:<br/><br/>* **Имя пользователя**<br/>  Имя создаваемого пользователя. Используется для подключения к Kafka и настройки прав.<br/>  Пример: `username-admin`<br/><br/>* **Топик**<br/>  Название топика, к которому будут назначены права для данного пользователя.<br/>  Пример: `orders-events`.<br/>  Использовать маску нельзя (`orders*`), только полное название или `*`.<br/><br/>* **Операции**<br/>  Список разрешённых операций на указанном топике.<br/>  Пример: `Describe, Read, Write`<br/><br/>* **Группа**<br/>  Имя группы, которой разрешён доступ. Используется при настройке консюмер-групп.<br/>  Пример: `order-consumers`.<br/><br/>* **Разрешённые хосты**<br/>  Список хостов или подсетей, с которых разрешено подключение пользователя.<br/>  Пример: `192.168.1.0/24` или `*`.<br/><br/>---<br/><br/>## 3. Параметры модификации пользователя<br/><br/>Ниже перечислены параметры, которые необходимо указать при модификации пользователя:<br/><br/>* **Имя пользователя**<br/>  Имя создаваемого пользователя. Используется для подключения к Kafka и настройки прав.<br/>  Пример: `username-admin`<br/><br/>* **Топик**<br/>  Название топика, к которому будут назначены права для данного пользователя.<br/>  Пример: `orders-events`.<br/>  Использовать маску нельзя (`orders*`), только полное название или `*`.<br/><br/>* **Операции**<br/>  Список разрешённых операций на указанном топике.<br/>  Пример: `Describe, Read, Write`<br/><br/>* **Группа**<br/>  Имя группы, которой разрешён доступ. Используется при настройке консюмер-групп.<br/>  Пример: `order-consumers`.<br/><br/>* **Разрешённые хосты**<br/>  Список хостов или подсетей, с которых разрешено подключение пользователя.<br/>  Пример: `192.168.1.0/24` или `*`.<br/><br/>---<br/><br/>## 4. Параметры удалении пользователя<br/><br/>Ниже перечислены параметры, которые необходимо указать при удалении пользователя:<br/><br/>* **Имя пользователя**<br/>  Имя удаляемого пользователя.<br/>  Пример: `username-admin`<br/><br/>## 5. Выходные параметры<br/><br/>После успешного создания пользователя платформа возвращает параметры, необходимые для подключения:<br/><br/>* **ca.crt**<br/>  Корневой сертификат (Certificate Authority), используемый для проверки подлинности сервера при TLS-подключении.<br/>  Файл содержит публичный ключ удостоверяющего центра, которому доверяют брокеры и клиенты. Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>   echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.crt<br/>   ```<br/><br/>* **ca.p12**<br/>  PKCS#12-хранилище с корневым сертификатом (Certificate Authority), используемое для проверки подлинности сервера при TLS-подключении.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.p12<br/>  ```<br/><br/>* **ca.password**<br/>  Пароль для доступа к хранилищу `ca.p12`. Выдаеться в чистом виде. Раскодировать не нужно.<br/><br/>* **user.crt**<br/>  Клиентский сертификат, подтверждающий личность пользователя при подключении к Kafka.<br/>  Используется совместно с приватным ключом `user.key` для аутентификации.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.crt<br/>  ```<br/><br/>* **user.key**<br/>  Приватный ключ пользователя, применяемый для установления защищённого TLS-соединения и подтверждения подлинности.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.key<br/>  ```<br/><br/>* **user.p12**<br/>  PKCS#12-хранилище с клиентским сертификатом и приватным ключом, предназначенное для аутентификации пользователя в Kafka.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo &quot;&lt;содержание поля&gt;&quot; | base64 -d &gt; &lt;название&gt;.p12<br/>  ```<br/><br/>* **user.password**<br/>  Пароль для доступа к хранилищу `user.p12`. Выдаеться в чистом виде. Раскодировать не нужно.<br/><br/>Эти параметры используются для настройки TLS-подключения.<br/><br/>---<br/><br/>## 6. Пример конфигурации клиента внутри кластера<br/><br/>Пример пода:<br/><br/>```yaml<br/>apiVersion: v1<br/>kind: Pod<br/>metadata:<br/>  name: kafka-4<br/>spec:<br/>  volumes:<br/>    - name: work<br/>      emptyDir: {}<br/>  containers:<br/>    - name: kcat<br/>      image: quay.io/strimzi/kafka:latest-kafka-4.0.0<br/>      command: [&quot;sleep&quot;, &quot;5600&quot;]<br/>      volumeMounts:<br/>        - name: work<br/>          mountPath: /work<br/>  restartPolicy: Never<br/>```<br/><br/>Создаём под и сохраняем сертификаты:<br/><br/>```bash<br/>kubectl cp user.p12 kafka-4:/work/<br/>kubectl cp ca.p12 kafka-4:/work/<br/>```<br/><br/>Создаём файлы конфигурации:<br/><br/>```bash<br/>cat &gt; /work/user-read.properties &lt;&lt;''EOF''<br/>security.protocol=SSL<br/>ssl.keystore.type=PKCS12<br/>ssl.keystore.location=/work/user.p12<br/>ssl.keystore.password=&lt;user.password&gt;<br/>ssl.truststore.type=PKCS12<br/>ssl.truststore.location=/work/ca.p12<br/>ssl.truststore.password=&lt;ca.password&gt;<br/>EOF<br/>```<br/><br/>```bash<br/>cat &gt; /work/user-write.properties &lt;&lt;''EOF''<br/>security.protocol=SSL<br/>ssl.keystore.type=PKCS12<br/>ssl.keystore.location=/work/user-write.p12<br/>ssl.keystore.password=&lt;user.password&gt;<br/>ssl.truststore.type=PKCS12<br/>ssl.truststore.location=/work/ca.p12<br/>ssl.truststore.password=&lt;ca.password&gt;<br/>EOF<br/>```<br/><br/>Листинг доступных топиков:<br/><br/>```bash<br/>/opt/kafka/bin/kafka-topics.sh \<br/>  --bootstrap-server kafkak8s-bootstrap-external:9093 \<br/>  --command-config /work/user-read.properties \<br/>  --list<br/>```<br/><br/>Запись сообщений:<br/><br/>```bash<br/>/opt/kafka/bin/kafka-console-producer.sh \<br/>  --bootstrap-server &lt;адрес сервис брокера&gt;:9093 \<br/>  --topic &lt;topic&gt; \<br/>  --producer.config /work/user-write.properties<br/>```<br/><br/>Чтение сообщений:<br/><br/>```bash<br/>/opt/kafka/bin/kafka-console-consumer.sh \<br/>  --bootstrap-server &lt;адрес сервис брокера&gt;:9093 \<br/>  --topic &lt;topic&gt; \<br/>  --from-beginning \<br/>  --group &lt;group&gt; \<br/>  --consumer.config /work/user-read.properties \<br/>  --max-messages 50<br/>```<br/><br/>---<br/><br/>## 7. Пример внешнего подключения с использованием **kcat**<br/><br/>**Листинг топиков**<br/><br/>```bash<br/>kcat -b &lt;externalConnect.bootstrap.fqdn&gt;:9093 \<br/>  -L \<br/>  -X security.protocol=SSL \<br/>  -X ssl.ca.location=./ca.crt \<br/>  -X ssl.certificate.location=./user-read.crt \<br/>  -X ssl.key.location=./user-read.key \<br/>  -X ssl.endpoint.identification.algorithm=none<br/>```<br/><br/>**Запись сообщения**<br/><br/>```bash<br/> echo &quot;hello from kcat&quot; | kcat -P \<br/>  -b &lt;externalConnect.bootstrap.fqdn&gt;:9093 \<br/>  -t write-test \<br/>  -X security.protocol=SSL \<br/>  -X ssl.ca.location=./ca.crt \<br/>  -X ssl.certificate.location=./user-write.crt \<br/>  -X ssl.key.location=./user-write.key \<br/>  -X ssl.endpoint.identification.algorithm=none<br/>```<br/><br/>**Чтение сообщений**<br/><br/>```bash<br/>kcat -C \<br/>  -b &lt;externalConnect.bootstrap.fqdn&gt;:9093 \<br/>  -t write-test \<br/>  -o beginning \<br/>  -q \<br/>  -X security.protocol=SSL \<br/>  -X ssl.ca.location=./ca.crt \<br/>  -X ssl.certificate.location=./user-read.crt \<br/>  -X ssl.key.location=./user-read.key \<br/>  -X ssl.endpoint.identification.algorithm=none<br/>```<br/><br/>---<br/><br/><br/>## 9. Рекомендации<br/><br/>* Минимизируйте набор разрешённых операций для повышения безопасности.<br/>* Используйте отдельные учётные записи для продюсеров, консюмеров и системных сервисов.<br/>* Ограничивайте доступ по IP или подсетям с помощью параметра **Разрешённые хосты**.<br/>* После изменения прав или групп пользователя рекомендуется проверить подключение и доступ к топикам.<br/><br/>---'
+      params:
+        - id: 540
+          code: username
+          data_type: string
+          required: true
+          descr: 'Пример: `username-admin`'
+    - name: modify
+      id: 162
+      kind: instance
+      action: modify
+      params:
+        - id: 1087
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 586
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "2000"
+              is_modifiable: false
+            - id: 587
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "2048"
+              is_modifiable: false
+            - id: 588
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+            - id: 589
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              is_modifiable: false
+        - id: 1088
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 590
+              code: allocationExternal
+              data_type: boolean
+              required: true
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              is_modifiable: false
+            - id: 591
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              is_modifiable: false
+    - name: modify_topic
+      id: 166
+      kind: subresource
+      action: modify
+      subresource: topic
+      man: '# Инструкция по управлению топиками Apache Kafka через платформу<br/><br/>## 1. Общая информация<br/><br/>---<br/><br/>Топик — это основная сущность в Apache Kafka, предназначенная для приёма сообщений от продюсеров и передачи их консюмерам.<br/>Платформа позволяет создавать, удалять и изменять параметры топиков без прямого доступа к брокерам, обеспечивая удобное управление через интерфейс или API.<br/><br/>---<br/><br/>## Доступные операции<br/><br/>- **create_topic**    — Создание топика<br/>- **modify_topic**    — Модификация топика<br/>- **delete_topic**    — Удаление топика<br/><br/>---<br/><br/>## 2. Параметры создания топика<br/><br/>Ниже перечислены параметры, которые необходимо указать при создании нового топика:<br/><br/>* **Имя топика**<br/>  Название топика.<br/>  Должно быть уникальным в пределах кластера.<br/>  Пример: `orders-events`.<br/><br/>* **Партиции**<br/>  Количество партиций топика.<br/>  Рекомендуется выбирать с учётом уровня параллелизма потребителей и предполагаемой нагрузки.<br/>  Пример: `6`. Здесь важно рассказать о том как происходит расчет оптимального количества<br/>  Обратите внимание: уменьшить количество партиций после создания невозможно, поэтому лучше закладывать небольшой запас на будущий рост нагрузки.<br/><br/>* **Реплики**<br/>  Количество реплик для каждой партиции.<br/>  Обычно равно количеству доступных брокеров или меньше.<br/>  Пример: `3`.<br/><br/><br/>---<br/><br/>## 4. Параметры модификации топика<br/><br/>Для уже существующих топиков можно изменять параметры. Все параметры являются опциональными:<br/><br/>* **Имя топика**<br/>  Название топика.<br/>  Пример: `orders-events`.<br/><br/>* **Партиции**<br/>  Новое количество партиций.<br/>  Пример: `12`.<br/><br/>* **Реплики**<br/>  Новое количество реплик.<br/>  Пример: `2`.<br/><br/>---<br/><br/>## 5. Рекомендации<br/><br/>* Планируйте количество партиций с запасом — уменьшение их числа невозможно.<br/>* Количество реплик должно соответствовать требуемому уровню отказоустойчивости, но не превышать количество брокеров.<br/>* Изменение параметров топика в рабочем окружении может временно влиять на производительность. Рекомендуется проводить крупные изменения в периоды минимальной нагрузки.<br/><br/>---'
+      params:
+        - id: 526
+          code: nameTopic
+          data_type: string
+          required: true
+          descr: 'Пример: `orders-events`'
+          sort: 10
+        - id: 527
+          code: partitions
+          required: false
+          descr: Число партиций на кластер ≤ 100 × (число брокеров) × (фактор репликации). Пример `50`
+          sort: 30
+        - id: 528
+          code: replicas
+          required: false
+          descr: Количество партиций ≤ (число брокеров). Пример `2`
+          sort: 20
+    - name: modify_user
+      id: 169
+      kind: subresource
+      action: modify
+      subresource: user
+      man: '# Инструкция по управлению пользователями Apache Kafka.<br/><br/>---<br/><br/>## 1. Общая информация<br/><br/>Пользователи в Apache Kafka используются для аутентификации и авторизации при подключении к кластеру.<br/>Платформа позволяет создавать, удалять и изменять пользователей без прямого доступа к брокерам, а также настраивать права доступа к топикам и группам.<br/>Это обеспечивает централизованное и безопасное управление доступом к ресурсам Kafka.<br/><br/>---<br/><br/>## Доступные операции<br/><br/>- **create_user**    — Создание пользователя<br/>- **modify_user**    — Модификация пользователя<br/>- **delete_user**    — Удаление пользователя<br/><br/>---<br/><br/>## 2. Параметры создания пользователя<br/><br/>Ниже перечислены параметры, которые необходимо указать при создании нового пользователя:<br/><br/>* **Имя пользователя**<br/>  Имя создаваемого пользователя. Используется для подключения к Kafka и настройки прав.<br/>  Пример: `username-admin`<br/><br/>* **Топик**<br/>  Название топика, к которому будут назначены права для данного пользователя.<br/>  Пример: `orders-events`.<br/>  Использовать маску нельзя (`orders*`), только полное название или `*`.<br/><br/>* **Операции**<br/>  Список разрешённых операций на указанном топике.<br/>  Пример: `Describe, Read, Write`<br/><br/>* **Группа**<br/>  Имя группы, которой разрешён доступ. Используется при настройке консюмер-групп.<br/>  Пример: `order-consumers`.<br/><br/>* **Разрешённые хосты**<br/>  Список хостов или подсетей, с которых разрешено подключение пользователя.<br/>  Пример: `192.168.1.0/24` или `*`.<br/><br/>---<br/><br/>## 3. Параметры модификации пользователя<br/><br/>Ниже перечислены параметры, которые необходимо указать при модификации пользователя:<br/><br/>* **Имя пользователя**<br/>  Имя создаваемого пользователя. Используется для подключения к Kafka и настройки прав.<br/>  Пример: `username-admin`<br/><br/>* **Топик**<br/>  Название топика, к которому будут назначены права для данного пользователя.<br/>  Пример: `orders-events`.<br/>  Использовать маску нельзя (`orders*`), только полное название или `*`.<br/><br/>* **Операции**<br/>  Список разрешённых операций на указанном топике.<br/>  Пример: `Describe, Read, Write`<br/><br/>* **Группа**<br/>  Имя группы, которой разрешён доступ. Используется при настройке консюмер-групп.<br/>  Пример: `order-consumers`.<br/><br/>* **Разрешённые хосты**<br/>  Список хостов или подсетей, с которых разрешено подключение пользователя.<br/>  Пример: `192.168.1.0/24` или `*`.<br/><br/>---<br/><br/>## 4. Параметры удалении пользователя<br/><br/>Ниже перечислены параметры, которые необходимо указать при удалении пользователя:<br/><br/>* **Имя пользователя**<br/>  Имя удаляемого пользователя.<br/>  Пример: `username-admin`<br/><br/>## 5. Выходные параметры<br/><br/>После успешного создания пользователя платформа возвращает параметры, необходимые для подключения:<br/><br/>* **ca.crt**<br/>  Корневой сертификат (Certificate Authority), используемый для проверки подлинности сервера при TLS-подключении.<br/>  Файл содержит публичный ключ удостоверяющего центра, которому доверяют брокеры и клиенты. Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>   echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.crt<br/>   ```<br/><br/>* **ca.p12**<br/>  PKCS#12-хранилище с корневым сертификатом (Certificate Authority), используемое для проверки подлинности сервера при TLS-подключении.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.p12<br/>  ```<br/><br/>* **ca.password**<br/>  Пароль для доступа к хранилищу `ca.p12`. Выдаеться в чистом виде. Раскодировать не нужно.<br/><br/>* **user.crt**<br/>  Клиентский сертификат, подтверждающий личность пользователя при подключении к Kafka.<br/>  Используется совместно с приватным ключом `user.key` для аутентификации.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.crt<br/>  ```<br/><br/>* **user.key**<br/>  Приватный ключ пользователя, применяемый для установления защищённого TLS-соединения и подтверждения подлинности.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo ''&lt;содержание поля&gt;'' | base64 -d &gt; &lt;название&gt;.key<br/>  ```<br/><br/>* **user.p12**<br/>  PKCS#12-хранилище с клиентским сертификатом и приватным ключом, предназначенное для аутентификации пользователя в Kafka.<br/>  Выдаеться в формате base64 для получения файла сертификата использовать команду<br/>  ```bash<br/>  echo &quot;&lt;содержание поля&gt;&quot; | base64 -d &gt; &lt;название&gt;.p12<br/>  ```<br/><br/>* **user.password**<br/>  Пароль для доступа к хранилищу `user.p12`. Выдаеться в чистом виде. Раскодировать не нужно.<br/><br/>Эти параметры используются для настройки TLS-подключения.<br/><br/>---<br/><br/>## 6. Пример конфигурации клиента внутри кластера<br/><br/>Пример пода:<br/><br/>```yaml<br/>apiVersion: v1<br/>kind: Pod<br/>metadata:<br/>  name: kafka-4<br/>spec:<br/>  volumes:<br/>    - name: work<br/>      emptyDir: {}<br/>  containers:<br/>    - name: kcat<br/>      image: quay.io/strimzi/kafka:latest-kafka-4.0.0<br/>      command: [&quot;sleep&quot;, &quot;5600&quot;]<br/>      volumeMounts:<br/>        - name: work<br/>          mountPath: /work<br/>  restartPolicy: Never<br/>```<br/><br/>Создаём под и сохраняем сертификаты:<br/><br/>```bash<br/>kubectl cp user.p12 kafka-4:/work/<br/>kubectl cp ca.p12 kafka-4:/work/<br/>```<br/><br/>Создаём файлы конфигурации:<br/><br/>```bash<br/>cat &gt; /work/user-read.properties &lt;&lt;''EOF''<br/>security.protocol=SSL<br/>ssl.keystore.type=PKCS12<br/>ssl.keystore.location=/work/user.p12<br/>ssl.keystore.password=&lt;user.password&gt;<br/>ssl.truststore.type=PKCS12<br/>ssl.truststore.location=/work/ca.p12<br/>ssl.truststore.password=&lt;ca.password&gt;<br/>EOF<br/>```<br/><br/>```bash<br/>cat &gt; /work/user-write.properties &lt;&lt;''EOF''<br/>security.protocol=SSL<br/>ssl.keystore.type=PKCS12<br/>ssl.keystore.location=/work/user-write.p12<br/>ssl.keystore.password=&lt;user.password&gt;<br/>ssl.truststore.type=PKCS12<br/>ssl.truststore.location=/work/ca.p12<br/>ssl.truststore.password=&lt;ca.password&gt;<br/>EOF<br/>```<br/><br/>Листинг доступных топиков:<br/><br/>```bash<br/>/opt/kafka/bin/kafka-topics.sh \<br/>  --bootstrap-server kafkak8s-bootstrap-external:9093 \<br/>  --command-config /work/user-read.properties \<br/>  --list<br/>```<br/><br/>Запись сообщений:<br/><br/>```bash<br/>/opt/kafka/bin/kafka-console-producer.sh \<br/>  --bootstrap-server &lt;адрес сервис брокера&gt;:9093 \<br/>  --topic &lt;topic&gt; \<br/>  --producer.config /work/user-write.properties<br/>```<br/><br/>Чтение сообщений:<br/><br/>```bash<br/>/opt/kafka/bin/kafka-console-consumer.sh \<br/>  --bootstrap-server &lt;адрес сервис брокера&gt;:9093 \<br/>  --topic &lt;topic&gt; \<br/>  --from-beginning \<br/>  --group &lt;group&gt; \<br/>  --consumer.config /work/user-read.properties \<br/>  --max-messages 50<br/>```<br/><br/>---<br/><br/>## 7. Пример внешнего подключения с использованием **kcat**<br/><br/>**Листинг топиков**<br/><br/>```bash<br/>kcat -b &lt;externalConnect.bootstrap.fqdn&gt;:9093 \<br/>  -L \<br/>  -X security.protocol=SSL \<br/>  -X ssl.ca.location=./ca.crt \<br/>  -X ssl.certificate.location=./user-read.crt \<br/>  -X ssl.key.location=./user-read.key \<br/>  -X ssl.endpoint.identification.algorithm=none<br/>```<br/><br/>**Запись сообщения**<br/><br/>```bash<br/> echo &quot;hello from kcat&quot; | kcat -P \<br/>  -b &lt;externalConnect.bootstrap.fqdn&gt;:9093 \<br/>  -t write-test \<br/>  -X security.protocol=SSL \<br/>  -X ssl.ca.location=./ca.crt \<br/>  -X ssl.certificate.location=./user-write.crt \<br/>  -X ssl.key.location=./user-write.key \<br/>  -X ssl.endpoint.identification.algorithm=none<br/>```<br/><br/>**Чтение сообщений**<br/><br/>```bash<br/>kcat -C \<br/>  -b &lt;externalConnect.bootstrap.fqdn&gt;:9093 \<br/>  -t write-test \<br/>  -o beginning \<br/>  -q \<br/>  -X security.protocol=SSL \<br/>  -X ssl.ca.location=./ca.crt \<br/>  -X ssl.certificate.location=./user-read.crt \<br/>  -X ssl.key.location=./user-read.key \<br/>  -X ssl.endpoint.identification.algorithm=none<br/>```<br/><br/>---<br/><br/><br/>## 9. Рекомендации<br/><br/>* Минимизируйте набор разрешённых операций для повышения безопасности.<br/>* Используйте отдельные учётные записи для продюсеров, консюмеров и системных сервисов.<br/>* Ограничивайте доступ по IP или подсетям с помощью параметра **Разрешённые хосты**.<br/>* После изменения прав или групп пользователя рекомендуется проверить подключение и доступ к топикам.<br/><br/>---'
+      params:
+        - id: 535
+          code: nameTopic
+          data_type: string
+          required: false
+          default: '*'
+          descr: 'Пример: `orders-events`. Использовать маску нельзя(`orders*`), только полное название или `*`'
+        - id: 536
+          code: operations
+          data_type: array
+          required: false
+          value_list:
+            - Create
+            - Describe
+            - Read
+            - Write
+          descr: 'Пример: `Create, Describe, Read, Write`'
+        - id: 537
+          code: group
+          data_type: string
+          required: false
+          default: '*'
+          descr: 'Пример: `order-consumers` или `*`'
+        - id: 538
+          code: accessHosts
+          data_type: string
+          required: false
+          default: '*'
+          descr: 'Пример: `192.168.1.0/24` или `*`'
+        - id: 539
+          code: username
+          data_type: string
+          required: true
+          descr: 'Пример: `username-admin`'
+          sort: 10
+    - name: resume
+      id: 161
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 160
+      kind: instance
+      action: suspend
+      params: []

@@ -1,0 +1,221 @@
+name: redis
+service_id: 91
+service_display_name: Redis
+service_short_name: redis
+service_man: 'Redis кластер. Под кеши. <br/>Ресурсная платформа: k8s. <br/>Автоматизация: k8s operator<br/>port 6379'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 21
+      kind: instance
+      action: create
+      params:
+        - id: 1061
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 510
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - iot-naeel
+                - k8s-3-sandbox-nubes-ru
+                - k8s-4-sandbox-nubes-ru
+              man: Кластер Kubernetes, на котором будет развернут экземпляр
+              is_modifiable: false
+        - id: 1062
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          is_modifiable: true
+          sub_params:
+            - id: 511
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "500"
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 512
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "512"
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 513
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+            - id: 514
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: "10"
+              man: Указывается в GIGAbytes
+              is_modifiable: false
+        - id: 1063
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          is_modifiable: true
+          sub_params:
+            - id: 515
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 516
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+            - id: 517
+              code: slaveIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 518
+              code: slaveAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+    - name: delete
+      id: 22
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 394
+      kind: instance
+      action: modify
+      params:
+        - id: 1064
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 519
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 520
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 521
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+            - id: 522
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в GIGAbytes
+              is_modifiable: false
+        - id: 1065
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 523
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 524
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: ""
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+            - id: 525
+              code: slaveIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 526
+              code: slaveAccessList
+              data_type: json
+              required: true
+              default: ""
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+    - name: reconcile
+      id: 391
+      kind: action
+      action: reconcile
+      params: []
+    - name: resume
+      id: 393
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 392
+      kind: instance
+      action: suspend
+      params: []

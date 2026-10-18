@@ -1,0 +1,165 @@
+name: vcexternalip
+service_id: 25
+service_display_name: Публичные IP адреса
+service_short_name: vcexternalip
+service_man: '**Обычно эта услуга разворачивается автоматически при развёртывании более сложных услуг**<br/>Вручную создавать можно, однако услуга требует много параметров, о которых можно просто не знать<br/><br/>Резервировать публичные IP адреса можно только после создания NGcloud Organization, NGcloud Виртуальный датацентр, NGcloud Каталог, Сетевой шлюз периметра.<br/>Вы можете назначить IP адрес для существующего экземпляра сервиса.'
+lifecycle:
+    suspend_on_destroy_default: false
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 56
+      kind: instance
+      action: create
+      params:
+        - id: 140
+          code: serviceUid
+          data_type: string
+          required: true
+          sort: 20
+          is_modifiable: true
+        - id: 141
+          code: dnatCreate
+          data_type: boolean
+          required: true
+          default: "true"
+          descr: Необходимо создать DNAT-правило.
+          sort: 40
+          is_modifiable: true
+        - id: 142
+          code: internalPortAccess
+          data_type: string
+          required: true
+          default: "5432"
+          descr: Порт для связки ната с адресом. Несколько значений можно передавать через пробел. Если передать all, то dnat будет на все порты. Требует dnatCreate=true<br/>
+          sort: 60
+          is_modifiable: true
+        - id: 143
+          code: snatCreate
+          data_type: boolean
+          required: false
+          descr: Необходимо создать SNAT-правило.<br/>
+          sort: 50
+          is_modifiable: true
+        - id: 144
+          code: internalAddrAccess
+          data_type: string
+          required: true
+          descr: Внутренний адрес для связки ната. Требует dnatCreate=true или snatCreate=true
+          sort: 70
+          is_modifiable: true
+        - id: 324
+          code: fromServiceNamespace
+          data_type: string
+          required: true
+          descr: Namespace составной услуги (для отображения правил FW)
+          sort: 80
+        - id: 325
+          code: fromServiceCloudEdgeName
+          data_type: string
+          required: false
+          descr: Edge составной услуги (указывать, если resourceRealm связан с CloudDirector)
+          sort: 90
+        - id: 326
+          code: fromServiceCloudVdcName
+          required: false
+          descr: Vdc составной услуги (указывать, если resourceRealm связан с CloudDirector)
+          sort: 100
+        - id: 327
+          code: fromServiceCloudOrgName
+          data_type: string
+          required: false
+          descr: Org составной услуги (указывать, если resourceRealm связан с CloudDirector)
+          sort: 110
+        - id: 328
+          code: fromServiceCloudVmwareUrl
+          data_type: string
+          required: false
+          descr: Api-Url составной услуги (указывать, если resourceRealm связан с CloudDirector)
+          sort: 120
+        - id: 336
+          code: ipSpaceName
+          data_type: string
+          required: true
+          descr: Тип ip Space (internet-ipv4-v1 / internet-antiddos-v1 / internet-no-antiddos-v1)
+          sort: 30
+          is_modifiable: true
+        - id: 488
+          code: resourceRealm
+          data_type: string
+          required: true
+          default: sandbox.nubes.ru
+          value_list:
+            - sandbox.nubes.ru
+          func: getAvailableResourceRealms
+          descr: Платформа для развертывания
+          sort: 200
+        - id: 624
+          code: fromServiceCloudEdgeScope
+          data_type: string
+          required: false
+          sort: 130
+        - id: 626
+          code: fromServiceVdcGroupName
+          data_type: string
+          required: false
+          sort: 140
+    - name: delete
+      id: 57
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 197
+      kind: instance
+      action: modify
+      params:
+        - id: 627
+          code: serviceUid
+          data_type: string
+          required: true
+          sort: 20
+        - id: 628
+          code: ipSpaceName
+          data_type: string
+          required: true
+          sort: 30
+        - id: 629
+          code: dnatCreate
+          data_type: boolean
+          required: true
+          sort: 40
+        - id: 630
+          code: snatCreate
+          data_type: boolean
+          required: true
+          sort: 50
+        - id: 631
+          code: internalPortAccess
+          data_type: string
+          required: true
+          sort: 60
+        - id: 632
+          code: internalAddrAccess
+          data_type: string
+          required: true
+          sort: 70

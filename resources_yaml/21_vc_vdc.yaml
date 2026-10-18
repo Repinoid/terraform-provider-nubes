@@ -1,0 +1,179 @@
+name: vc_vdc
+service_id: 21
+service_display_name: Виртуальный датацентр (vDC)
+service_short_name: vc_vdc
+service_man: '# Инструкция по развертыванию Виртуальный датацентр (vDC) через платформу<br/><br/>## 1. Общая информация<br/><br/>**Виртуальный датацентр (vDC)** — это логическая изолированная среда в VMware Cloud Director, предназначенная для размещения и управления виртуальными машинами, сетевой инфраструктурой и ресурсами хранения. Сервис обеспечивает выделение вычислительных ресурсов под конкретную организацию и предоставляет гибкие параметры масштабирования, контроля потребления и разделения ресурсов.<br/><br/>### Доступные операции<br/><br/>**create** — Создание виртуального датацентра (vDC) с заданными параметрами CPU, RAM, Storage и сетевой конфигурацией.<br/>**delete** — Удаление vDC. Требуется предварительный перевод vDC в состояние *suspend*. Полное удаление возможно через 14 дней.<br/>**modify** — Внесение изменений в параметры ресурсов (CPU/RAM/Storage), выделенных для vDC.<br/>**suspend** — Заморозка vDC. Новые ресурсы или изменения внутри vDC становятся невозможными, работа ВМ не останавливается.<br/>**resume** — Разморозка vDC. Восстановление возможности управления сущностями внутри vDC.<br/><br/>---<br/><br/>## 2. Параметры развертывания<br/><br/>Ниже перечислены входные параметры операции **create**.<br/><br/>### UUID Организации<br/>Уникальный идентификатор организации в Cloud Director. Перед созданием vDC требуется предварительное создание услугу `Организация в Cloud Director`.<br/><br/>### Provider VDC в Cloud Director<br/>Свойство ресурсной платформы, определяющее, какой пул физических ресурсов будет использоваться.<br/><br/>### Network Pool в Cloud Director<br/>Определяет возможности сетевой конфигурации, включая создание Edge Gateway и выход во внешние сети.<br/><br/>### Гарантированная доля ЯДЕР<br/>Гарантированный процент вычислительных ресурсов (CPU), закрепленный за vDC. Значение устанавливается разово при создании.<br/><br/>### Гарантированная доля ОЗУ<br/>Гарантированный процент оперативной памяти, закрепленный за vDC. Также задаётся один раз при создании.<br/><br/>### Сколько аллоцировать на VDC ЯДЕР<br/>Количество виртуальных ядер, выделяемых в рамках vDC.<br/><br/>### Сколько аллоцировать на VDC ОЗУ<br/>Количество оперативной памяти в GB, выделяемой для vDC.<br/><br/>### Конфигурация Storage<br/>Набор дисковых политик и их объёмов, выделяемых для vDC. Указывается имя политики и требуемый размер (GB).<br/><br/>---<br/><br/>## 3. Рекомендованные характеристики<br/><br/>### Тестовое окружение<br/><br/>- Количество ядер CPU: 10–20<br/>- Аллоцируемая RAM: 16–64 GB<br/>- Гарантированная доля CPU: 20%<br/>- Гарантированная доля RAM: 20%<br/>- Storage:<br/>- Политика `SATA`<br/>- Объём: 100–300 GB<br/><br/>### Промышленное окружение<br/><br/>- Количество ядер CPU: 16–128<br/>- Аллоцируемая RAM: 64–512 GB<br/>- Гарантированная доля CPU: 50%<br/>- Гарантированная доля RAM: 50%<br/>- Storage:<br/>- Политики уровня `SSD`<br/>- Объём: 1–10 TB, выбор несколько политик под разные нагрузки<br/><br/>---<br/><br/>## 4. Выходные параметры<br/><br/>Выходные параметры формируются операцией **create** (и используются другими операциями):<br/><br/>### Имя vDC<br/>Уникальный идентификатор созданного виртуального датацентра. Используется в дальнейших операциях (modify, suspend, delete).<br/><br/>### Параметры выделенных ресурсов<br/>Подтверждение итогового объёма CPU/RAM/Storage, выделенных vDC. Используются для учёта и контроля потребления.<br/><br/>---<br/><br/>## 5. Дополнительная информация<br/><br/>- Перед созданием vDC необходимо обеспечить наличие корректно созданной организации и доступных пула ресурсов ресурсной платформы.<br/>- Гарантированная доля CPU и RAM задаётся **однократно при создании vDC**. После развертывания изменить эти значения невозможно; для изменения необходимо пересоздать vDC.<br/>- Удаление vDC возможно только через **14 дней после перевода в состояние *suspend***. Удаление очищает все связанные сущности (ВМ, сети, каталоги), поэтому необходимо убедиться, что данные перенесены.<br/>- Платформа Cloud Director использует концепцию изолированных организационных ресурсов, поэтому корректная настройка Provider VDC и Network Pool является обязательной при создании vDC.<br/>- При изменении параметров (modify) изменяются только показатели CPU, RAM и Storage. Сетевые параметры и гарантированные доли остаются неизменными.<br/>'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 9
+      kind: instance
+      action: create
+      params:
+        - id: 30
+          code: organizationUid
+          data_type: uuid
+          required: true
+          ref_svc_id: 19
+          man: Для создания VDC предварительно необходимо создать организацию через услугу `Организация в Cloud Director`
+          sort: 10
+        - id: 335
+          code: providerVdc
+          data_type: string
+          required: true
+          man: Приписка `2.8` - Скорость vCPU - 2800MHz<br/>И так далее...<br/>
+          sort: 30
+          depends_on: organizationUid,networkProvider
+        - id: 361
+          code: storageConfig
+          data_type: array-map-fixed
+          required: true
+          default: '[{}]'
+          man: Первая политика в списке указывается как &quot;По умолчанию&quot;
+          sort: 100
+          is_modifiable: true
+          sub_params:
+            - id: 41
+              code: name
+              data_type: string
+              required: true
+              default: ""
+              descr: getKeyListFromStruct(getResourceRealmConfig(getStringFromStruct(getInstanceState(params.organizationUid), &quot;params.resourceRealm&quot;)), concat(&quot;vcd.hardware.providerVdcs['&quot;,params.providerVdc,&quot;'].storage&quot;))
+              is_modifiable: false
+            - id: 42
+              code: size
+              data_type: integer &gt; 0
+              required: true
+              default: "2000"
+              is_modifiable: false
+        - id: 397
+          code: cpuGuaranteed
+          data_type: integer &gt;= 0
+          required: true
+          default: "0"
+          value_list:
+            - "0"
+            - "50"
+            - "80"
+          descr: '% резервирования'
+          man: Свойство нельзя изменить после создания
+          sort: 60
+        - id: 557
+          code: cpuAllocated
+          data_type: integer &gt; 0
+          required: true
+          default: "80"
+          maxvalue: 1000
+          minvalue: 1
+          descr: шт
+          sort: 80
+          is_modifiable: true
+        - id: 558
+          code: memAllocated
+          data_type: integer &gt; 0
+          required: true
+          default: "200"
+          maxvalue: 4096
+          minvalue: 1
+          descr: gb
+          sort: 90
+          is_modifiable: true
+        - id: 746
+          code: networkProvider
+          data_type: string
+          required: true
+          sort: 20
+          depends_on: organizationUid
+        - id: 1130
+          code: suffixName
+          data_type: string
+          required: false
+          default: uutarulq
+          regex: ^[a-zA-Z0-9-]+$
+          maxlength: 16
+          minlength: 1
+          man: Если вписать произвольное значение, оно будет добавлено в конец имени VDC<br/>**Нельзя изменить после создания**
+          sort: 15
+    - name: delete
+      id: 24
+      kind: instance
+      action: delete
+      man: 'Удалить возможно только через 14 дней после выполнения операции `suspend`<br/>**ОСТОРЖНО: Удаление приводит к полному удалению всех сущностей внутри этого VDC**<br/><br/>Если существуют инстансы Edge, vApp, Vm или Kubernetes-кластер Штурвал, которые были созданы, из ЛК удалены не будут. Необходимо обратиться к `технической поддержке` для удаления инстансов'
+      params: []
+    - name: modify
+      id: 112
+      kind: instance
+      action: modify
+      params:
+        - id: 560
+          code: cpuAllocated
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 999
+          minvalue: 1
+          descr: шт
+          sort: 10
+        - id: 561
+          code: memAllocated
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 1024
+          minvalue: 1
+          descr: gb
+          sort: 20
+        - id: 562
+          code: storageConfig
+          data_type: array-map-fixed
+          required: true
+          man: Первая политика в списке указывается как &quot;По умолчанию&quot;
+          sort: 30
+          sub_params:
+            - id: 43
+              code: name
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 44
+              code: size
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+    - name: reconcile
+      id: 250
+      kind: action
+      action: reconcile
+      params: []
+    - name: resume
+      id: 172
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 171
+      kind: instance
+      action: suspend
+      man: Операция **не останавливает ВМки** в облаке, но не даёт редактировать все сущности внутри VDC
+      params: []

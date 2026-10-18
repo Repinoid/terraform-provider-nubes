@@ -1,0 +1,350 @@
+name: mongodb
+service_id: 92
+service_display_name: MongoDB
+service_short_name: mongodb
+service_man: '# Инструкция по развертыванию MongoDB через платформу<br/><br/>## 1. Общая информация<br/><br/>MongoDB — документоориентированная распределённая база данных, обеспечивающая высокую доступность, горизонтальное масштабирование и гибкую модель хранения.<br/><br/>### Доступные операции с кластером<br/><br/>* **create**        — создание базы<br/>* **delete**         — удаление базы данных<br/>* **suspend**        — остановка базы данных<br/>* **resume**         — запуск базы данных<br/>* **modify**         — изменение базы данных<br/>* **create_backup**  — создание бэкапа вручную<br/>* **delete_backup**  — удаление бэкапов<br/>* **rollback**       — восстановление кластера из бэкапа<br/><br/>### Доступные операции с пользователями<br/><br/>* **create_user** — создание пользователя<br/>* **modify_user** — модификация пользователя<br/>* **delete_user** — удаление пользователя<br/><br/>---<br/><br/>## 2. Параметры создания базы данных<br/><br/>Эти параметры необходимо указать при создании базы данных.<br/><br/>### Платформа для развертывания<br/><br/>Среда, в которой будет развёрнут кластер. Выбирается из предложенного списка.<br/><br/>### Количество узлов<br/><br/>Количество реплик в кластере MongoDB.<br/>Оптимально выбирать нечётное значение, так как это обеспечивает корректный процесс выбора ведущего узла и сохраняет работоспособность базы данных даже при отказе одной из нод.<br/><br/>&gt; **Примечание:** уменьшение количества узлов после создания кластера не рекомендуется.<br/><br/>### Квота памяти пода (MB)<br/><br/>Объём памяти для одного пода в мегабайтах.<br/>Пример: `2048`<br/><br/>### Квота CPU пода (mCPU)<br/><br/>CPU-квота для пода в миликорах (1000 mCPU = 1 vCPU).<br/>Пример: `1000`<br/><br/>### Размер диска для базы данных (GB)<br/><br/>Объём диска для хранения данных в гигабайтах.<br/>Пример: `20`<br/><br/>### Расписание резервного копирования<br/><br/>Cron-выражение (5 полей), по которому автоматически создаются резервные копии.<br/>Пример: `0 0 * * *` (каждый день в 00:00)<br/><br/>### Хранить последних бэкапов<br/><br/>Сколько последних успешных резервных копий хранить — более старые удаляются автоматически.<br/>Пример: `7`<br/><br/>&gt; **Примечание:** ротация применяется только к бэкапам, созданным по расписанию. Бэкапы,<br/>&gt; созданные вручную операцией `create_backup`, в неё не входят и не удаляются автоматически —<br/>&gt; их нужно убирать вручную через `delete_backup`.<br/><br/>### Имя ipSpace для публикации внешнего IP<br/><br/>Имя ipSpace, через который будет выделен внешний IP для доступа к master-узлу.<br/>Укажите `no-needed`, если внешний адрес не требуется.<br/>Пример: `internet-no-antiddos-v1`<br/><br/>### Список разрешённых IP-адресов<br/><br/>Список IP-адресов или подсетей, с которых разрешён доступ к кластеру.<br/>Если оставить пустым — доступ открыт для всех источников.<br/>Пример: `[&quot;10.0.0.0/24&quot;, &quot;192.168.1.10/32&quot;]`<br/><br/>### Включить TLS<br/><br/>Булевый параметр. Определяет режим работы TLS кластера.<br/><br/>- `true` — TLS включён (`tls.mode: allowTLS`). Сертификаты сохраняются в Vault.<br/>- `false` — TLS выключен (`tls.mode: disabled`).<br/><br/>По умолчанию: `false`.<br/><br/>---<br/><br/>## 3. Параметры модификации базы данных<br/><br/>Все параметры, которые вы указываете при модификации, являются необязательными — система автоматически подставит ранее сохранённые значения, и при необходимости вы можете изменить их на нужные.<br/><br/>### Количество узлов<br/><br/>Количество реплик в кластере MongoDB.<br/>Оптимально выбирать нечётное значение, так как это обеспечивает корректный процесс выбора ведущего узла и сохраняет работоспособность базы данных даже при отказе одной из нод.<br/><br/>&gt; **Примечание:** уменьшение количества узлов после создания кластера не рекомендуется.<br/><br/>### Квота памяти пода (MB)<br/><br/>Объём памяти для одного пода в мегабайтах.<br/>Пример: `2048`<br/><br/>### Квота CPU пода (mCPU)<br/><br/>CPU-квота для пода в миликорах (1000 mCPU = 1 vCPU).<br/>Пример: `1000`<br/><br/>### Размер диска для базы данных (GB)<br/><br/>Объём диска для хранения данных указывается в гигабайтах. Его можно увеличить при необходимости, однако уменьшить уже выделенный размер невозможно.<br/>Пример: `20`<br/><br/>### Расписание резервного копирования<br/><br/>Cron-выражение (5 полей), по которому автоматически создаются резервные копии.<br/>Пример: `0 0 * * *` (каждый день в 00:00)<br/><br/>### Хранить последних бэкапов<br/><br/>Сколько последних успешных резервных копий хранить — более старые удаляются автоматически.<br/>Пример: `7`<br/><br/>&gt; **Примечание:** ротация применяется только к бэкапам, созданным по расписанию. Бэкапы,<br/>&gt; созданные вручную операцией `create_backup`, в неё не входят и не удаляются автоматически —<br/>&gt; их нужно убирать вручную через `delete_backup`.<br/><br/>### Имя ipSpace для публикации внешнего IP<br/><br/>Имя ipSpace, через который будет выделен внешний IP для доступа к master-узлу.<br/>Укажите `no-needed`, если внешний адрес не требуется.<br/>Пример: `internet-no-antiddos-v1`<br/><br/>### Список разрешённых IP-адресов<br/><br/>Список IP-адресов или подсетей, с которых разрешён доступ к кластеру.<br/>Если оставить пустым — доступ открыт для всех источников.<br/>Пример: `[&quot;10.0.0.0/24&quot;, &quot;192.168.1.10/32&quot;]`<br/><br/>---<br/><br/>## 4. Параметры удаления базы данных<br/><br/>### Удалить бакет S3 с бэкапами<br/><br/>Булевый параметр.<br/><br/>- `true` — вместе с кластером также будут удалены все резервные копии и бакет S3.<br/>- `false` — бакет S3 и хранящиеся в нём бэкапы сохраняются после удаления кластера.<br/><br/>По умолчанию: `false`.<br/><br/>---<br/><br/>## 5. Параметры создания бэкапа<br/><br/>### Имя бэкапа<br/><br/>Имя резервной копии, которое будет присвоено объекту бэкапа в кластере.<br/>Должно соответствовать требованиям Kubernetes к именам объектов (строчные буквы, цифры, дефисы).<br/>Пример: `manual-20260904`<br/><br/>&gt; **Примечание:** такой бэкап не участвует в автоматической ротации по параметру<br/>&gt; &quot;Хранить последних бэкапов&quot; (она применяется только к бэкапам по расписанию) и не удаляется<br/>&gt; сам — при необходимости убрать его нужно вручную операцией `delete_backup`.<br/><br/>---<br/><br/>## 6. Параметры восстановления из бэкапа<br/><br/>### Имя бэкапа<br/><br/>Имя существующей резервной копии кластера, из которой будет выполнено восстановление. Указывается один из бэкапов в состоянии `ready` (созданных автоматически по расписанию или вручную через операцию create_backup).<br/><br/>---<br/><br/>## 7. Параметры удаления бэкапов<br/><br/>### Имена бэкапов<br/><br/>Список имён резервных копий для удаления.<br/>Пример: `[&quot;manual-20260904&quot;, &quot;cron-mongok8s-...-20260903020000&quot;]`<br/><br/>---<br/><br/>## 8. Параметры создания пользователя<br/><br/>### Имя пользователя<br/><br/>Указывается имя пользователя (любой регистр).<br/>Пример: `readApp`<br/><br/>&gt; **Примечание:** имя пользователя должно быть уникальным в рамках кластера. Если пользователь<br/>&gt; с таким именем уже существует, операция завершится ошибкой — используйте `modify_user` для<br/>&gt; изменения прав или `delete_user` + `create_user` для пересоздания.<br/><br/>### Имя базы данных<br/><br/>Название базы, в которой будет создан пользователь.<br/>Если база отсутствует, она будет создана автоматически.<br/>Пример: `Apps_9392`<br/><br/>### Имя роли<br/><br/>* **read** — доступ только на чтение<br/>* **readWrite** — чтение и изменение данных<br/>* **dbOwner** — полный контроль над базой данных<br/>* **dbAdmin** — администрирование базы данных (индексы, статистика, схема) без доступа к чтению/записи данных<br/><br/>---<br/><br/>## 9. Параметры модификации пользователя<br/><br/>### Имя пользователя<br/><br/>Необходимо выбрать существующего пользователя.<br/>Если список пуст, требуется предварительно создать пользователя.<br/><br/>### Имя базы данных<br/><br/>База данных, к которой относится пользователь.<br/>Если база отсутствует, она будет создана автоматически.<br/>Пример: `Apps_9392`<br/><br/>### Имя роли<br/><br/>* **read**<br/>* **readWrite**<br/>* **dbOwner**<br/>* **dbAdmin**<br/><br/>---<br/><br/>## 10. Параметры удаления пользователя<br/><br/>### Имя пользователя<br/><br/>Выберите пользователя из списка для удаления.<br/><br/>---<br/><br/>## 11. Выходные параметры<br/><br/>После успешного развертывания базы данных платформа возвращает ключевые параметры.<br/><br/>### internalConnect<br/><br/>Внутренний эндпоинт для подключения к кластеру из сервисов, работающих в той же сети.<br/>Используется для внутренних интеграций и системных сервисов.<br/><br/>### externalConnect<br/><br/>Внешний FQDN для подключения к кластеру извне.<br/>Порт подключения — **27017**.<br/><br/>&gt; **Важно:** оба эндпоинта — это Kubernetes Service на весь replset, а не адрес конкретно<br/>&gt; primary-узла. Kubernetes не отслеживает, кто из узлов сейчас primary, поэтому новое<br/>&gt; подключение без параметра `replicaSet` может попасть на secondary и упасть с ошибкой записи<br/>&gt; `not writable primary`. Обязательно указывайте `replicaSet=rs0` в строке подключения (см.<br/>&gt; примеры ниже) — тогда драйвер сам обнаружит топологию кластера и всегда направит запись на<br/>&gt; актуальный primary, независимо от количества реплик и от того, происходили ли выборы.<br/><br/>---<br/><br/>## 12. Пример подключения<br/><br/>Перед подключением необходимо установить **mongosh**.<br/><br/>### 12.1 Подключение без TLS<br/><br/>Для внутреннего подключения из той же сети:<br/><br/>```<br/>mongosh &quot;mongodb://&lt;username&gt;:&lt;password&gt;@&lt;endpoint_db&gt;:27017/&lt;dbName&gt;?authSource=admin&replicaSet=rs0&quot;<br/>```<br/><br/>### 12.2 Подключение через внешний endpoint с TLS<br/><br/>Кластер требует клиентский TLS-сертификат (mutual TLS). Сертификаты сохраняются в Vault при создании кластера в блоке `cer` в полях `ca`, `cer`, `key` в кодировке base64.<br/><br/>Подготовка файлов:<br/><br/>```bash<br/># Декодировать сертификаты из Vault<br/>echo &quot;&lt;ca из блока Учётные данные&gt;&quot; | base64 -d &gt; ca.crt<br/>echo &quot;&lt;cer из из блока Учётные данные&quot; | base64 -d &gt; tls.crt<br/>echo &quot;&lt;key из из блока Учётные данные&gt;&quot; | base64 -d &gt; tls.key<br/><br/># Собрать клиентский PEM<br/>cat tls.key tls.crt &gt; client.pem<br/>```<br/><br/>Подключение:<br/><br/>```<br/>mongosh &quot;mongodb://&lt;username&gt;:&lt;password&gt;@&lt;external_endpoint_db&gt;:27017/&lt;dbName&gt;?tls=true&tlsCAFile=ca.crt&tlsCertificateKeyFile=client.pem&authSource=admin&replicaSet=rs0&quot;<br/>```<br/><br/>Где:<br/><br/>* `&lt;username&gt;` — имя пользователя<br/>* `&lt;password&gt;` — пароль<br/>* `&lt;endpoint_db&gt;` — internalConnect (для подключения без TLS)<br/>* `&lt;external_endpoint_db&gt;` — externalConnect (для внешнего подключения с TLS)<br/>* `&lt;dbName&gt;` — имя базы данных<br/><br/>## 13. Дополнительная информация<br/><br/>Режим TLS задаётся параметром `mongoConfiguration.tls` только при создании кластера.<br/>После создания изменение TLS через модификацию не поддерживается.<br/><br/>- При `true` кластер разворачивается с включённым TLS (`tls.mode: allowTLS`). Сервер принимает как обычные, так и TLS-соединения.<br/>- При `false` TLS выключен (`tls.mode: disabled`).<br/><br/>Для внешнего подключения (`externalConnect`) используется сертификат, выпущенный через cert-manager, с SAN, покрывающим внешний DNS-адрес кластера — поэтому `tlsAllowInvalidHostnames` не требуется, хост проверяется как обычно.<br/><br/>Внутренние подключения TLS-сертификат не используют вообще: режим `allowTLS` допускает как TLS, так и обычные соединения, но для внутреннего трафика применяется обычное (не TLS) подключение — см. пример 12.1.<br/><br/>### Почему обязателен `replicaSet=rs0` в строке подключения<br/><br/>Percona-оператор не проставляет на поды никакого динамического лейбла роли (primary/secondary) —<br/>у всех подов replset''а полностью одинаковые лейблы, различается только имя/индекс пода.<br/>`master`-сервис — это обычный Kubernetes Service с фиксированным селектором на весь replset, он<br/>не знает и не может знать, какой под сейчас primary: k8s просто раздаёт новые TCP-подключения<br/>по кругу между всеми узлами. Без `replicaSet=rs0` в URI подключение может закрепиться на<br/>secondary, и любая попытка записи будет падать с `not writable primary` — независимо от того,<br/>происходили выборы недавно или нет. Указание `replicaSet=rs0` включает у драйвера обнаружение<br/>топологии реплики, и он сам направляет запись на актуальный primary при любом количестве узлов<br/>и после любых переизбраний.<br/>'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 37
+      kind: instance
+      action: create
+      params:
+        - id: 1089
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 594
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - iot-naeel
+                - k8s-3-sandbox-nubes-ru
+                - k8s-4-sandbox-nubes-ru
+              descr: Кластер Kubernetes, на котором будет развернут экземпляр
+              is_modifiable: false
+        - id: 1090
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          is_modifiable: true
+          sub_params:
+            - id: 595
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "1000"
+              is_modifiable: false
+            - id: 596
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "1024"
+              is_modifiable: false
+            - id: 597
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+            - id: 598
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: "5"
+              man: Указывается в Gb
+              is_modifiable: false
+        - id: 1091
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 40
+          is_modifiable: true
+          sub_params:
+            - id: 599
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              descr: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 600
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+        - id: 1102
+          code: backupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 25
+          is_modifiable: true
+          sub_params:
+            - id: 635
+              code: s3Uid
+              data_type: uuid
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 636
+              code: retain
+              data_type: integer &gt; 0
+              required: true
+              default: "7"
+              is_modifiable: false
+            - id: 637
+              code: schedule
+              data_type: string
+              required: true
+              default: 0 0 * * *
+              regex: ^((((\d+,)+\d+|(\d+(\/|-|#)\d+)|(\d+L?)|(\*(\/\d+)?)|(L(-\d+)?)|(\?)|([A-Z]{3}(-[A-Z]{3})?)) ?){5,7})|(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every (\d+(ns|us|µs|ms|s|m|h))+)$
+              man: '``` * * * * * ```  &lt;-- Минута(0-59), Час(0-23), День(1-31), Месяц(1-12), День_недели(0-7, где 0-Вс)'
+              is_modifiable: false
+        - id: 1116
+          code: mongoConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 45
+          sub_params:
+            - id: 679
+              code: tls
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "true"
+                - "false"
+              descr: Шифрует данные между внешними подключениями и базой данных.
+              is_modifiable: false
+    - name: create_backup
+      id: 411
+      kind: subresource
+      action: create
+      subresource: backup
+      params:
+        - id: 1109
+          code: backupName
+          data_type: string
+          required: true
+          regex: ^[a-z0-9-]+$
+          descr: Используйте только строчные латинские буквы, цифры и дефис (без пробелов).
+          sort: 10
+    - name: create_user
+      id: 198
+      kind: subresource
+      action: create
+      subresource: user
+      params:
+        - id: 635
+          code: username
+          data_type: string
+          required: true
+        - id: 636
+          code: dbName
+          data_type: string
+          required: true
+        - id: 643
+          code: role
+          data_type: string
+          required: true
+          value_list:
+            - read
+            - readWrite
+            - dbAdmin
+            - dbOwner
+    - name: delete
+      id: 190
+      kind: instance
+      action: delete
+      params:
+        - id: 1103
+          code: deleteS3Bucket
+          data_type: boolean
+          required: true
+          default: "true"
+          value_list:
+            - "false"
+            - "true"
+    - name: delete_backup
+      id: 414
+      kind: subresource
+      action: delete
+      subresource: backup
+      params:
+        - id: 1111
+          code: backupName
+          data_type: array
+          required: true
+          descr: Необходимо выбрать бекапы для удаления
+    - name: delete_user
+      id: 199
+      kind: subresource
+      action: delete
+      subresource: user
+      params:
+        - id: 644
+          code: username
+          data_type: array
+          required: true
+          descr: Необходимо выбрать одного или несколько пользователей для удаления
+    - name: modify
+      id: 201
+      kind: instance
+      action: modify
+      params:
+        - id: 1092
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 601
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 602
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 603
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+            - id: 604
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Gb
+              is_modifiable: false
+        - id: 1093
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 40
+          sub_params:
+            - id: 605
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              descr: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 606
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: ""
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+        - id: 1104
+          code: backupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 638
+              code: retain
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 639
+              code: schedule
+              data_type: string
+              required: true
+              default: ""
+              regex: ^((((\d+,)+\d+|(\d+(\/|-|#)\d+)|(\d+L?)|(\*(\/\d+)?)|(L(-\d+)?)|(\?)|([A-Z]{3}(-[A-Z]{3})?)) ?){5,7})|(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every (\d+(ns|us|µs|ms|s|m|h))+)$
+              man: '``` * * * * * ```  &lt;-- Минута(0-59), Час(0-23), День(1-31), Месяц(1-12), День_недели(0-7, где 0-Вс)'
+              is_modifiable: false
+    - name: modify_user
+      id: 200
+      kind: subresource
+      action: modify
+      subresource: user
+      params:
+        - id: 640
+          code: username
+          data_type: string
+          required: true
+        - id: 641
+          code: dbName
+          data_type: string
+          required: true
+        - id: 642
+          code: role
+          data_type: string
+          required: true
+          value_list:
+            - read
+            - readWrite
+            - dbAdmin
+            - dbOwner
+    - name: reconcile
+      id: 409
+      kind: action
+      action: reconcile
+      params: []
+    - name: resume
+      id: 196
+      kind: instance
+      action: resume
+      params: []
+    - name: rollback
+      id: 413
+      kind: action
+      action: rollback
+      params:
+        - id: 1108
+          code: backupName
+          data_type: string
+          required: true
+    - name: suspend
+      id: 194
+      kind: instance
+      action: suspend
+      params: []

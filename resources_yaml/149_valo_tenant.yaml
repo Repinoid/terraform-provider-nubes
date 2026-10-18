@@ -1,0 +1,249 @@
+name: valo_tenant
+service_id: 149
+service_display_name: VALO Cloud
+service_short_name: valoTenant
+service_man: '# Инструкция по развертыванию Тенант Valo через платформу<br/><br/>## 1. Общая информация<br/>Тенант Valo — логический изолированный экземпляр сервиса VALO Cloud, предоставляющий защищённое облачное хранилище, синхронизацию данных и доступ к документам с различных устройств. При создании тенант автоматически разворачивается в тестовом режиме сроком на 2 месяца. Перевод в промышленную эксплуатацию выполняется отдельной операцией.<br/><br/>### Доступные операции<br/><br/>* **create** — создание нового тенанта в тестовом режиме сроком на 2 месяца.<br/>* **modify** — изменение настроек тенанта, включая перевод из ТЕСТ в ПРОД.<br/>* **suspend** — выключение (приостановка работы) тенанта.<br/>* **resume** — включение ранее приостановленного тенанта.<br/>* **delete** — удаление тенанта; доступно только после выполнения операции suspend.<br/><br/>---<br/><br/>## 2. Параметры развертывания<br/><br/>Параметры входных данных операции **create**:<br/><br/>### Платформа для развертывания<br/>Описание: платформа, на которой будет создан тенант.<br/>Пример значения: `valo.ngcloud.ru`.<br/><br/>### DNS-Префикс<br/>Описание: Будет добавлено в зону valo.ngcloud.ru<br/>Пример значения: `mysimpledomain`.<br/><br/>### Параметры хранилища<br/>Описание: Сколько места будет выделено под использование в тенанте. Данные хранятся в S3. Размер указывается в Gigabytes<br/>Пример значения: `10`.<br/><br/>### Настройки тенанта<br/>Описание: Ряд конфигурации Valo-тенанта, такие как настройки пользователя и доступного функционала<br/>Пример значения: `опционально в рамках настройки`.<br/><br/>---<br/><br/>## 3. Рекомендованные характеристики<br/><br/>### Тестовое окружение<br/>Достаточно развернуть тенант в ТЕСТ. Срок предоставляется в 2 месяца. По истечению срока тенант автоматически переводится в `suspend` на стороне ресурсной платформы<br/><br/>### Промышленное окружение<br/>Для разблокировки используйте операцию `modify`<br/><br/>---<br/><br/>## 4. Выходные параметры<br/><br/>Услуга предоставляет следующие выходные параметры (формируются в процессе операций):<br/><br/>### Статус тенанта<br/>Отражает текущее состояние и параметры.<br/><br/>---<br/><br/>## 5. Дополнительная информация<br/>Тенант всегда создаётся в режиме ТЕСТ и не может быть сразу переведён в ПРОД без операции modify.<br/>Удаление тенанта возможно только после его выключения с помощью операции suspend.<br/>Срок тестового режима составляет 2 месяца с момента создания.<br/>Операции suspend и resume используются для временного управления доступностью сервиса без потери конфигурации.<br/>'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 202
+      kind: instance
+      action: create
+      params:
+        - id: 655
+          code: resourceRealm
+          data_type: string
+          required: true
+          default: valo.ngcloud.ru
+          value_list:
+            - valo.ngcloud.ru
+          func: getAvailableResourceRealms
+          sort: 10
+        - id: 656
+          code: domain
+          data_type: string
+          required: true
+          regex: ^[a-z0-9](?:[a-z0-9-]{3,61}[a-z0-9])?$
+          maxlength: 61
+          minlength: 3
+          descr: Будет добавлено в зону valo.ngcloud.ru
+          sort: 20
+        - id: 657
+          code: valoOptions
+          data_type: map-fixed
+          required: true
+          default: '{}'
+          sort: 40
+          is_modifiable: true
+          sub_params:
+            - id: 20
+              code: requestApproveMaxPeriod
+              data_type: integer &gt; 0
+              required: true
+              default: "2"
+              descr: Максимальное значение периода согласования (в днях)
+              is_modifiable: false
+            - id: 21
+              code: ffOnlineEditor
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+            - id: 22
+              code: ffWatermark
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+            - id: 23
+              code: ffUserImport
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+            - id: 24
+              code: ffThemes
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+            - id: 25
+              code: ffPublicLink
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+            - id: 26
+              code: ffLogging
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+            - id: 28
+              code: userCount
+              data_type: integer &gt; 0
+              required: true
+              default: "10"
+              is_modifiable: false
+        - id: 658
+          code: s3Storage
+          data_type: integer &gt; 0
+          required: true
+          default: "10"
+          maxvalue: 999
+          minvalue: 1
+          descr: Параметр указывается в `Gb`
+          man: Данные хранятся в отдельном экземпляре S3
+          sort: 30
+          is_modifiable: true
+    - name: delete
+      id: 206
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 203
+      kind: instance
+      action: modify
+      params:
+        - id: 659
+          code: valoOptions
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 29
+              code: userCount
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 30
+              code: requestApproveMaxPeriod
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              descr: Максимальное значение периода согласования (в днях)
+              is_modifiable: false
+            - id: 31
+              code: ffOnlineEditor
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+            - id: 32
+              code: ffWatermark
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+            - id: 33
+              code: ffUserImport
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+            - id: 34
+              code: ffThemes
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+            - id: 35
+              code: ffPublicLink
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+            - id: 36
+              code: ffLogging
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "false"
+                - "true"
+              man: Тарифная опция
+              is_modifiable: false
+        - id: 660
+          code: s3Storage
+          data_type: integer &gt; 0
+          required: true
+          descr: Параметр указывается в `Gb`
+          man: Данные хранятся в отдельном экземпляре S3
+          sort: 20
+    - name: resume
+      id: 205
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 204
+      kind: instance
+      action: suspend
+      params: []

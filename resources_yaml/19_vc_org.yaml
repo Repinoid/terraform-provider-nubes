@@ -1,0 +1,148 @@
+name: vc_org
+service_id: 19
+service_display_name: Организация в Cloud Director
+service_short_name: vcOrg
+service_man: '# Инструкция по развертыванию Организация в Cloud Director через платформу<br/><br/>## 1. Общая информация<br/><br/>Сервис **Организация в Cloud Director** предназначен для управления изолированными организационными единицами (тенантами) внутри инфраструктуры Cloud Director. Он обеспечивает создание, модификацию и администрирование организаций, предоставление им облачных ресурсов, а также контроль уровня доступа. Сервис используется для организации рабочих окружений потребителей, управления жизненным циклом организаций и их сетевой инфраструктурой.<br/><br/>### Доступные операции<br/><br/>**create** — Создание новой организации с заданными характеристиками и типом доступа.<br/>**delete** — Удаление организации после перехода в состояние suspend; приводит к удалению всех связанных сущностей.<br/>**modify** — Изменение параметров внутри организации (на текущий момент поддерживается изменение ipSpaces).<br/>**suspend** — Заморозка организации, ограничение возможности изменения и добавления сущностей.<br/>**resume** — Разморозка организации, восстановление функций управления.<br/><br/>---<br/><br/>## 2. Параметры развертывания<br/><br/>Параметры входных данных операции **create**:<br/><br/>### Платформа для развертывания<br/>Описание: платформа, на которой будет создана организация.<br/>Пример значения: `ngcloud.ru`.<br/><br/>### Тип организации<br/>Описание: тип создаваемой организации.<br/>Варианты:<br/>- `iaas` — организация с прямым доступом к облаку и авторизацией через Keycloak.<br/>- `saas` — организация под управлением Nubes, без прямого доступа к облаку.<br/><br/>---<br/><br/>## 3. Рекомендованные характеристики<br/><br/>### Тестовое окружение<br/>- Тип организации: `iaas` для обеспечения полного доступа к облачным ресурсам и самостоятельного управления.<br/><br/>### Промышленное окружение<br/>- Тип организации: `saas` (упрощённая модель использования).<br/><br/>---<br/><br/>## 4. Выходные параметры<br/><br/>Услуга предоставляет следующие выходные параметры (формируются в процессе операций):<br/><br/>### Url организации<br/>Для быстрого доступа в тенант<br/><br/>### Статус организации<br/>Отражает текущее состояние и параметры.<br/><br/>---<br/><br/>## 5. Дополнительная информация<br/><br/>- Для конфигурации внешних IP внутри организации необходимо предварительно создать:<br/>-- хотя бы один **Виртуальный датацентр (VDC)** привязанный к этой организации;<br/>-- хотя бы один **Сетевой шлюз периметра (Edge Gateway)**, привязанный к vdc выше.<br/>- Удаление организации возможно только через 14 дней после перевода в состояние suspend.<br/>- Удаление организации приводит к удалению всех связанных сущностей: VDC, Edge Gateway, пулов IP, сетей, ВМок и иных объектов.<br/>- Операция suspend не останавливает виртуальные машины, но блокирует любые изменения инфраструктуры внутри организации.<br/>- Для iaas-организаций доступ осуществляется через Keycloak.'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 136
+      kind: instance
+      action: create
+      man: '`IaaS`  - Доступ в Keycloak предоставляется пользователю, который создаёт услугу<br/>`SaaS` - Без доступа к Keycloak'
+      params:
+        - id: 418
+          code: resourceRealm
+          data_type: string
+          required: true
+          default: sandbox.nubes.ru
+          value_list:
+            - sandbox.nubes.ru
+          func: getAvailableResourceRealms
+          descr: Облако в котором будет развёрнут тенант
+          man: Выбрать платформу из списка<br/><br/>**Если список не отображается**<br/>обратитесь к сервис менеджеру с вопросом предоставления ресурсной платформы
+          sort: 10
+        - id: 556
+          code: organizationType
+          data_type: string
+          required: true
+          default: iaas
+          value_list:
+            - iaas
+            - saas
+          man: Доступ к организации предоставляется только при выборе `iaas`
+          sort: 20
+        - id: 1125
+          code: organizationSuffix
+          data_type: string
+          required: false
+          regex: ^[0-9a-z]+$
+          maxlength: 10
+          minlength: 3
+          sort: 30
+    - name: create_user
+      id: 283
+      kind: subresource
+      action: create
+      subresource: user
+      params:
+        - id: 871
+          code: admins
+          data_type: array-map-fixed
+          required: true
+          default: '[{}]'
+          sort: 10
+          sub_params:
+            - id: 238
+              code: email
+              data_type: string
+              required: true
+              default: ""
+              man: Пользователи будут добавлены, только если они зарегистрированы в личном кабинете
+              is_modifiable: false
+    - name: delete
+      id: 137
+      kind: instance
+      action: delete
+      man: 'Удалить возможно только через 14 дней после выполнения операции `suspend`<br/>**ОСТОРЖНО: Удаление приводит к полному удалению всех сущностей внутри этого тенанта**<br/><br/>Если существуют инстансы VDC, Edge, vApp, Vm или Kubernetes-кластер Штурвал, которые были созданы, из ЛК удалены не будут. Необходимо обратиться к `технической поддержке` для удаления инстансов'
+      params: []
+    - name: delete_user
+      id: 284
+      kind: subresource
+      action: delete
+      subresource: user
+      params:
+        - id: 872
+          code: admins
+          data_type: array-map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 239
+              code: email
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+    - name: modify
+      id: 207
+      kind: instance
+      action: modify
+      man: Для возможности изменения параметров предварительно необходимо создать **Виртуальный датацентр (VDC)**, потом **Сетевой шлюз периметра (Edge Gateway)**<br/>Также при удалении ipSpaces убедитесь, что все внешние IP удалены. В случае если хоть одна привязка vIP есть, данный ipSpace удалён **не будет**
+      params:
+        - id: 662
+          code: vIPConfigure
+          data_type: array-map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 39
+              code: name
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 40
+              code: count
+              data_type: integer &gt;= 0
+              required: true
+              default: ""
+              descr: 'Пример: `1`'
+              is_modifiable: false
+    - name: reconcile
+      id: 249
+      kind: action
+      action: reconcile
+      params: []
+    - name: resume
+      id: 144
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 143
+      kind: instance
+      action: suspend
+      man: Операция **не останавливает ВМки** в облаке, но не даёт редактировать все сущности внутри тенанта
+      params: []

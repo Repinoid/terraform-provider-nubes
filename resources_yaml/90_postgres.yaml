@@ -1,0 +1,1012 @@
+name: postgres
+service_id: 90
+service_display_name: PostgreSQL
+service_short_name: postgres
+service_man: '# Инструкция по развертыванию PostgreSQL через платформу<br/><br/>---<br/>## 1. Общая информация<br/><br/>PostgreSQL — это надёжная объектно-реляционная СУБД с открытым исходным кодом, поддерживающая расширенный набор функций, транзакции и хранение сложных типов данных. Развёртывание полностью автоматизировано платформой на базе Zalando Postgres Operator с использованием Kubernetes.<br/><br/>## Доступные операции<br/><br/>- **create**    — Создание кластера<br/>- **delete**    — Удаление кластера<br/>- **modify**    — Модификация кластера<br/>- **suspend**   — Остановка кластера<br/>- **resume**    — Запуск кластера<br/>- **restart**   — Перезапуск кластера<br/>- **recovery**  — Восстановление из резервной копии<br/><br/>- **create_user**     — Создание пользователя<br/>- **delete_user**     — Удаление пользователя<br/><br/>- **create_database** — Создание базы данных<br/>- **delete_database** — Удаление базы данных<br/><br/><br/>---<br/>## 2. Параметры развертывания кластера<br/><br/>Ниже перечислены параметры, которые необходимо указать при создании ресурса PostgreSQL:<br/><br/>* **Платформа для развертывания:**<br/>  Платформа для развертывания (среда, в которой будет развернут кластер). Пример: `k8s-3.ext.nubes.ru`.<br/><br/>* **Количество узлов в сети:**<br/>  Количество инстансов (реплик) в кластере PostgreSQL. Пример: `2` (master + slave).<br/><br/>* **Квота (megabyte) памяти пода:**<br/>  Квота памяти пода в мегабайтах. Пример: `2048`<br/><br/>* **Квота (millicore) ядра пода:**<br/>  Квота CPU пода в миликорах (1000 mCPU = 1 vCPU). Пример: `1000`<br/><br/>* **Размер (gigabyte) диска для базы данных:**<br/>  Размер диска для хранения данных в гигабайтах. Пример: `20`<br/><br/>* **Выделяет внешний IP для доступа к master:**<br/>  Флаг, определяющий, нужно ли выделять внешний IP для доступа к master. Пример: `true` или `false`<br/><br/>* **Имя ipSpace для публикации внешнего IP master:**<br/>  Если включен предыдущий параметр, то поле необходимо заполнить. Пример: `internet-no-antiddos-v1`<br/><br/>* **Выделяет внешний IP для доступа к slave:**<br/>  Флаг для выделения внешнего IP для slave (реплики чтения). Работает, если slave присутствует в кластере.<br/><br/>* **Имя ipSpace для публикации внешнего IP slave:**<br/>  Если включен параметр для slave, то поле необходимо заполнить.<br/><br/>* **UUID экземпляра услуги S3:**<br/>  UUID экземпляра S3 для хранения резервных копий.<br/><br/>* **Версия PostgreSQL:**<br/>  Версия PostgreSQL для развертывания. Пример: `16`<br/><br/>* **Расписание бэкапов (ext_BACKUP_SCHEDULE):**<br/>  Необязательный. Cron-выражение для времени запуска бэкапов. По умолчанию: `0 0 * * *` (ежедневно в полночь).<br/><br/>* **Количество сохраняемых бэкапов (ext_BACKUP_NUM_TO_RETAIN):**<br/>  Необязательный. Количество сохраняемых бэкапов. По умолчанию: `7`<br/><br/>* **PgPooler (master / slave):**<br/>  Флаги включения PgBouncer для подключений на запись и чтение. При включении создаётся отдельный под.<br/><br/>* **Разрешить подключение без SSL (allowNoSSL):**<br/>  По умолчанию подключение с sslmode=require. При `true` разрешается подключение без SSL.<br/><br/>* **Автоскейлинг PV (autoScale):**<br/>  Включает автоскейлинг тома. Требует настройки autoScalePercentage, autoScaleTechWindow, autoScaleQuotaGb.<br/><br/>* **Дополнительные параметры PostgreSQL (jsonParameters):**<br/>  JSON с переменными конфигурации PostgreSQL. Документация: https://www.postgresql.org/docs/current/runtime-config.html<br/><br/>---<br/>## 3. Выходные параметры<br/><br/>После успешного развертывания ресурса PostgreSQL платформа возвращает ряд параметров.<br/><br/>#### externalConnect<br/><br/>Внешние эндпоинты для подключения к кластеру:<br/>- **master** — для операций записи (host: `write.${namespace}`, port: 5432)<br/>- **slave** — для операций чтения (host: `read.${namespace}`, port: 5432)<br/><br/>Пример ответа платформы:<br/><br/>```json<br/>{<br/>  &quot;slave&quot;: {<br/>    &quot;ip&quot;: &quot;&quot;,<br/>    &quot;fqdn&quot;: &quot;&quot;,<br/>    &quot;uuid&quot;: &quot;&quot;,<br/>    &quot;isExternal&quot;: false<br/>  },<br/>  &quot;master&quot;: {<br/>    &quot;ip&quot;: &quot;&lt;ip&gt;&quot;,<br/>    &quot;fqdn&quot;: &quot;write.&lt;namespace&gt;.&lt;cluster-domain&gt;&quot;,<br/>    &quot;uuid&quot;: &quot;&lt;uuid&gt;&quot;,<br/>    &quot;isExternal&quot;: false<br/>  }<br/>}<br/>```<br/><br/>Поля: `ip` — внешний IP; `fqdn` — полное имя хоста; `uuid` — идентификатор; `isExternal` — признак внешнего доступа.<br/><br/>#### internalConnect<br/><br/>Внутренние эндпоинты (FQDN) для подключения из других сервисов внутри той же сети Kubernetes.<br/><br/>Пример ответа платформы:<br/><br/>```json<br/>{<br/>  &quot;slave&quot;: &quot;&quot;,<br/>  &quot;master&quot;: {<br/>    &quot;slave&quot;: &quot;&quot;,<br/>    &quot;master&quot;: {<br/>      &quot;slave&quot;: &quot;&quot;,<br/>      &quot;master&quot;: &quot;postgresqlk8s-master.&lt;namespace&gt;.svc.cluster.local&quot;<br/>    }<br/>  }<br/>}<br/>```<br/><br/>Для подключения используйте значение `master.master.master` (host для записи) или соответствующее значение slave (host для чтения).<br/><br/>Для подключения используется порт **5432**.<br/><br/>---<br/>## 4. Управление пользователями<br/><br/>### create_user — Создание пользователя<br/><br/>* **Имя пользователя (username):**<br/>  Имя создаваемого пользователя. Используется для подключения к базе и настройки прав.<br/>  Пример: `myapp_user`<br/><br/>* **Роль (role):**<br/>  Тип роли пользователя. Допустимые значения:<br/>  - `app_user` — базовые права для DML-операций (SELECT, INSERT, UPDATE, DELETE)<br/>  - `ddl_user` — расширенные права: createdb, createrole (управление базами и ролями)<br/><br/>Защищённые имена, которые нельзя использовать: `admin`, `postgres`, `standby`.<br/><br/>### delete_user — Удаление пользователя<br/><br/>* **Имя пользователя (username):**<br/>  Имя удаляемого пользователя. Пример: `myapp_user`<br/><br/>Пользователя нельзя удалить, если он является владельцем базы данных. Сначала удалите или передайте владение базами данных другому пользователю.<br/><br/>---<br/>## 5. Управление базами данных<br/><br/>### create_database — Создание базы данных<br/><br/>* **Имя базы данных (dbName):**<br/>  Название создаваемой базы данных. Пример: `myapp_db`<br/><br/>* **Владелец базы данных (dbOwner):**<br/>  Имя пользователя-владельца базы. Должен существовать в кластере (создан через create_user). Пример: `myapp_user`<br/><br/>### delete_database — Удаление базы данных<br/><br/>* **Имя базы данных (dbName):**<br/>  Название удаляемой базы данных. Пример: `myapp_db`<br/>'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 19
+      kind: instance
+      action: create
+      man: руководство
+      params:
+        - id: 788
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          is_modifiable: true
+          sub_params:
+            - id: 104
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "500"
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 105
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "512"
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 106
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+            - id: 107
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: "10"
+              man: Указывается в GIGAbytes
+              is_modifiable: false
+        - id: 789
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 108
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - iot-naeel
+                - k8s-3-sandbox-nubes-ru
+                - k8s-4-sandbox-nubes-ru
+              man: Кластер Kubernetes, на котором будет развернут экземпляр
+              is_modifiable: false
+        - id: 790
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          is_modifiable: true
+          sub_params:
+            - id: 109
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 110
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+            - id: 111
+              code: slaveIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 112
+              code: slaveAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+        - id: 791
+          code: postgresConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 40
+          is_modifiable: true
+          sub_params:
+            - id: 113
+              code: version
+              data_type: string
+              required: true
+              default: "17"
+              value_list:
+                - "18"
+                - "17"
+                - "16"
+                - "15"
+              is_modifiable: false
+            - id: 114
+              code: poolerMaster
+              data_type: boolean
+              required: true
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              man: Включает pgPooler (на запись). Будет создан новый под<br/>Размер пода **200m/400Mi**
+              is_modifiable: false
+            - id: 115
+              code: poolerSlave
+              data_type: boolean
+              required: true
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              man: Включает pgPooler (на чтение). Будет создан новый под<br/>Размер пода **200m/400Mi**
+              is_modifiable: false
+            - id: 116
+              code: sslRequired
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "true"
+                - "false"
+              man: По умолчанию подключение обязательное (sslmode=require)
+              is_modifiable: false
+        - id: 792
+          code: postgresConf
+          data_type: map-fixed
+          required: false
+          man: Как правильно вводить значения описано здесь (https://www.postgresql.org/docs/current/runtime-config.html)<br/>**Новые настройки можно добавить по запросу**
+          sort: 50
+          is_modifiable: true
+          sub_params:
+            - id: 117
+              code: log_disconnections
+              data_type: string
+              required: false
+              default: "off"
+              value_list:
+                - "off"
+                - "on"
+              is_modifiable: false
+            - id: 118
+              code: log_connections
+              data_type: string
+              required: false
+              default: "off"
+              value_list:
+                - "off"
+                - "on"
+              is_modifiable: false
+            - id: 735
+              code: max_connections
+              data_type: integer &gt; 0
+              required: false
+              default: "100"
+              is_modifiable: false
+        - id: 793
+          code: backupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 60
+          is_modifiable: true
+          sub_params:
+            - id: 119
+              code: s3Uid
+              data_type: string
+              required: false
+              default: 00000000-0000-0000-0000-000000000000
+              man: Экземпляр S3 обязателен
+              is_modifiable: false
+            - id: 120
+              code: retain
+              data_type: integer &gt; 0
+              required: true
+              default: "7"
+              man: Подразумевается количество **полных бэкапов**<br/><br/>Простой пример:<br/>- Бэкап создаётся каждый день<br/>- Кол-во инкрементов - 6<br/>- Кол-во бэкапов - 3<br/><br/>
+              is_modifiable: false
+            - id: 121
+              code: schedule
+              data_type: string
+              required: true
+              default: 0 0 * * *
+              regex: ^((((\d+,)+\d+|(\d+(\/|-|#)\d+)|(\d+L?)|(\*(\/\d+)?)|(L(-\d+)?)|(\?)|([A-Z]{3}(-[A-Z]{3})?)) ?){5,7})|(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every (\d+(ns|us|µs|ms|s|m|h))+)$
+              is_modifiable: false
+            - id: 697
+              code: incrementCount
+              data_type: integer &gt;= 0
+              required: false
+              default: "0"
+              is_modifiable: false
+        - id: 794
+          code: autoscaleConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 70
+          is_modifiable: true
+          sub_params:
+            - id: 122
+              code: enabled
+              data_type: boolean
+              required: true
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              man: Включает автоскейлинг PV. При включении параметра необходимо настроить autoScalePercentage и autoScaleTechWindow. Алерт при срабатывании вызывает modify у текущей услуги
+              is_modifiable: false
+            - id: 123
+              code: schedule
+              data_type: integer &gt;= 0
+              required: true
+              default: "0"
+              value_list:
+                - "0"
+                - "5"
+                - "12"
+                - "23"
+              man: Требует включения autoScale. Окно обновления (пока не реализовано). Указывается час в виде Integer (0 / 5 / 12 / 23)
+              is_modifiable: false
+            - id: 124
+              code: quota
+              data_type: integer &gt; 0
+              required: true
+              default: "100"
+              man: До какого размера возможно увеличивать диск, когда включен Autoscale
+              is_modifiable: false
+            - id: 125
+              code: percent
+              data_type: integer &gt; 0
+              required: true
+              default: "10"
+              value_list:
+                - "10"
+                - "15"
+                - "20"
+              man: Требует включения autoScale. Позволяет указать в процентах расширение от текущего макс объема<br/>Минимальный размер на который расширяется - **1Gb**
+              is_modifiable: false
+        - id: 1094
+          code: mtlsConfiguration
+          data_type: map-fixed
+          required: true
+          default: '{}'
+          sort: 80
+          is_modifiable: true
+          sub_params:
+            - id: 609
+              code: type
+              data_type: string
+              required: true
+              default: "off"
+              value_list:
+                - "off"
+                - manual
+                - auto
+              man: '`off` - Настройка MTLS производиться не будет<br/>`manual` - После создания кластера в полях данных будет запрос на создание сертификата. **Вам необходимо будет выписать сертификат через вашу CA** и уже после включить через операцию **modify** режим MTLS<br/>`auto` - Сертификаты будут созданы через Cert-Manager<br/><br/>Режимы **auto** и **manual** требует включить настройку `Включить sslMode` - **true**<br/>MTLS в режиме **auto** будет работать сразу, в режиме **manual** только после того как будет предоставлен **CA** и **Сертификат сервера**'
+              is_modifiable: false
+            - id: 610
+              code: durationCA
+              data_type: integer &gt; 0
+              required: true
+              default: "175200"
+              man: Указывается в **часах**<br/>Необходимо настраивать, когда параметр `Режим настройки` - **auto**
+              is_modifiable: false
+            - id: 611
+              code: durationServer
+              data_type: integer &gt; 0
+              required: true
+              default: "43800"
+              man: Указывается в **часах**<br/>Не может быть больше чем время жизни СА<br/>Обновляется **раз в год**, если выставлено значение **более 2 лет**<br/>Обновляется **раз в пол года**, если выставлено значение **менее 2 лет**<br/>Необходимо настраивать, когда параметр `Режим настройки` - **auto**
+              is_modifiable: false
+            - id: 612
+              code: certCA
+              data_type: string
+              required: false
+              default: ""
+              is_modifiable: false
+            - id: 613
+              code: certServer
+              data_type: string
+              required: false
+              default: ""
+              is_modifiable: false
+    - name: create_backup
+      id: 264
+      kind: subresource
+      action: create
+      subresource: backup
+      params: []
+    - name: create_database
+      id: 245
+      kind: subresource
+      action: create
+      subresource: database
+      params:
+        - id: 741
+          code: dbName
+          data_type: string
+          required: true
+          regex: ^[A-Za-z0-9]+$
+        - id: 742
+          code: dbOwner
+          data_type: string
+          required: true
+    - name: create_user
+      id: 241
+      kind: subresource
+      action: create
+      subresource: user
+      params:
+        - id: 733
+          code: username
+          data_type: string
+          required: true
+          regex: ^[A-Za-z0-9]+$
+          maxlength: 62
+          minlength: 2
+          sort: 10
+        - id: 740
+          code: role
+          data_type: string
+          required: true
+          value_list:
+            - app_user
+            - ddl_user
+          descr: Выбрать роль из списка
+          man: '`app_user` — стандартный пользователь с базовым набором прав<br/>`ddl_user` — пользователь с расширенными правами, включая управление ролями и базами данных'
+          sort: 20
+        - id: 1096
+          code: mtlsAccess
+          data_type: boolean
+          required: true
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          man: Подключение пользователя без ввода паролей<br/>Политика применяется **ко всем базам** внутри Postgresql<br/><br/>RBAC на базы настраивать вручную
+          sort: 30
+    - name: delete
+      id: 20
+      kind: instance
+      action: delete
+      params:
+        - id: 457
+          code: deleteS3Bucket
+          data_type: boolean
+          required: true
+          default: "true"
+          value_list:
+            - "false"
+            - "true"
+          descr: Также удалить технический S3 Bucket с бэкапами?
+          sort: 10
+    - name: delete_database
+      id: 246
+      kind: subresource
+      action: delete
+      subresource: database
+      params:
+        - id: 743
+          code: dbName
+          data_type: string
+          required: true
+    - name: delete_user
+      id: 244
+      kind: subresource
+      action: delete
+      subresource: user
+      params:
+        - id: 739
+          code: username
+          data_type: string
+          required: true
+          descr: 'Пример: `username-admin`'
+    - name: modify
+      id: 48
+      kind: instance
+      action: modify
+      params:
+        - id: 795
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 126
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 127
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 128
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+            - id: 129
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в GIGAbytes
+              is_modifiable: false
+        - id: 796
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 130
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 131
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: ""
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+            - id: 132
+              code: slaveIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 133
+              code: slaveAccessList
+              data_type: json
+              required: true
+              default: ""
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+        - id: 797
+          code: postgresConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          sub_params:
+            - id: 134
+              code: version
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - "18"
+                - "17"
+                - "16"
+              is_modifiable: false
+            - id: 135
+              code: sslRequired
+              data_type: boolean
+              required: true
+              default: false,true
+              man: По умолчанию подключение обязательное (sslmode=require)
+              is_modifiable: false
+            - id: 136
+              code: poolerMaster
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "false"
+                - "true"
+              man: Включает pgPooler (на запись). Будет создан новый под<br/>Размер пода **200m/400Mi**
+              is_modifiable: false
+            - id: 137
+              code: poolerSlave
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "false"
+                - "true"
+              man: Включает pgPooler (на чтение). Будет создан новый под<br/>Размер пода **200m/400Mi**
+              is_modifiable: false
+        - id: 798
+          code: postgresConf
+          data_type: map-fixed
+          required: false
+          man: Как правильно вводить значения описано здесь (https://www.postgresql.org/docs/current/runtime-config.html)<br/>**Новые настройки можно добавить по запросу**
+          sort: 40
+          sub_params:
+            - id: 271
+              code: log_connections
+              data_type: string
+              required: false
+              default: ""
+              value_list:
+                - "off"
+                - "on"
+              is_modifiable: false
+            - id: 272
+              code: log_disconnections
+              data_type: string
+              required: false
+              default: ""
+              value_list:
+                - "off"
+                - "on"
+              is_modifiable: false
+            - id: 737
+              code: max_connections
+              data_type: integer &gt; 0
+              required: false
+              default: ""
+              is_modifiable: false
+        - id: 799
+          code: backupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 50
+          sub_params:
+            - id: 138
+              code: retain
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 139
+              code: schedule
+              data_type: string
+              required: true
+              default: 0 0 * * *
+              regex: ^((((\d+,)+\d+|(\d+(\/|-|#)\d+)|(\d+L?)|(\*(\/\d+)?)|(L(-\d+)?)|(\?)|([A-Z]{3}(-[A-Z]{3})?)) ?){5,7})|(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every (\d+(ns|us|µs|ms|s|m|h))+)$
+              is_modifiable: false
+            - id: 193
+              code: s3Uid
+              data_type: uuid
+              required: true
+              default: ""
+              man: Экземпляр S3 обязателен
+              is_modifiable: false
+            - id: 698
+              code: incrementCount
+              data_type: integer &gt;= 0
+              required: false
+              default: ""
+              is_modifiable: false
+        - id: 800
+          code: autoscaleConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 60
+          sub_params:
+            - id: 140
+              code: enabled
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "false"
+                - "true"
+              man: Включает автоскейлинг PV. При включении параметра необходимо настроить autoScalePercentage и autoScaleTechWindow. Алерт при срабатывании вызывает modify у текущей услуги
+              is_modifiable: false
+            - id: 141
+              code: schedule
+              data_type: integer &gt;= 0
+              required: true
+              default: ""
+              value_list:
+                - "0"
+                - "5"
+                - "12"
+                - "23"
+              man: Требует включения autoScale. Окно обновления (пока не реализовано). Указывается час в виде Integer (0 / 5 / 12 / 23)
+              is_modifiable: false
+            - id: 142
+              code: quota
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: До какого размера возможно увеличивать диск, когда включен Autoscale
+              is_modifiable: false
+            - id: 143
+              code: percent
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "10"
+                - "15"
+                - "20"
+              man: Требует включения autoScale. Позволяет указать в процентах расширение от текущего макс объема<br/>Минимальный размер на который расширяется - **1Gb**
+              is_modifiable: false
+        - id: 1095
+          code: mtlsConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 70
+          sub_params:
+            - id: 614
+              code: type
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - "off"
+                - manual
+                - auto
+              man: '`off` - Настройка MTLS производиться не будет<br/>`manual` - После создания кластера в полях данных будет запрос на создание сертификата. **Вам необходимо будет выписать сертификат через вашу CA** и уже после включить через операцию **modify** режим MTLS<br/>`auto` - Сертификаты будут созданы через Cert-Manager<br/><br/>Режимы **auto** и **manual** требует включить настройку `Включить sslMode` - **true**<br/>MTLS в режиме **auto** будет работать сразу, в режиме **manual** только после того как будет предоставлен **CA** и **Сертификат сервера**'
+              is_modifiable: false
+            - id: 615
+              code: durationCA
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в **часах**<br/>Необходимо настраивать, когда параметр `Режим настройки` - **auto**
+              is_modifiable: false
+            - id: 616
+              code: durationServer
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в **часах**<br/>Не может быть больше чем время жизни СА<br/>Обновляется **раз в год**, если выставлено значение **более 2 лет**<br/>Обновляется **раз в пол года**, если выставлено значение **менее 2 лет**<br/>Необходимо настраивать, когда параметр `Режим настройки` - **auto**
+              is_modifiable: false
+            - id: 617
+              code: certCA
+              data_type: string
+              required: false
+              default: ""
+              man: Предварительно сертификат можно получить командой<br/>`cat ca.crt | base64 -w0`
+              is_modifiable: false
+            - id: 618
+              code: certServer
+              data_type: string
+              required: false
+              default: ""
+              man: Предварительно сертификат можно получить командой<br/>`cat server.crt | base64 -w0`
+              is_modifiable: false
+            - id: 634
+              code: refreshCert
+              data_type: boolean
+              required: false
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              man: На случай если его нужно обновить/заменить
+              is_modifiable: false
+    - name: reconcile
+      id: 263
+      kind: action
+      action: reconcile
+      params: []
+    - name: recovery
+      id: 47
+      kind: action
+      action: recovery
+      params:
+        - id: 801
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 144
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - iot-naeel
+                - k8s-3-sandbox-nubes-ru
+                - k8s-4-sandbox-nubes-ru
+              man: Кластер Kubernetes, на котором будет развернут экземпляр
+              is_modifiable: false
+            - id: 166
+              code: recoveryPoint
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+        - id: 802
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 145
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "500"
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 146
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "512"
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 147
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+            - id: 148
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: "10"
+              man: Указывается в GIGAbytes
+              is_modifiable: false
+        - id: 803
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          sub_params:
+            - id: 149
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 150
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+            - id: 151
+              code: slaveIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 152
+              code: slaveAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+        - id: 804
+          code: postgresConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 40
+          sub_params:
+            - id: 153
+              code: version
+              data_type: string
+              required: true
+              default: "17"
+              value_list:
+                - "17"
+                - "16"
+              is_modifiable: false
+            - id: 154
+              code: sslRequired
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "false"
+                - "true"
+              man: По умолчанию подключение обязательное (sslmode=require)
+              is_modifiable: false
+            - id: 155
+              code: poolerMaster
+              data_type: boolean
+              required: true
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              man: Включает pgPooler (на запись). Будет создан новый под<br/>Размер пода **200m/400Mi**
+              is_modifiable: false
+            - id: 156
+              code: poolerSlave
+              data_type: boolean
+              required: true
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              man: Включает pgPooler (на чтение). Будет создан новый под<br/>Размер пода **200m/400Mi**
+              is_modifiable: false
+        - id: 805
+          code: postgresConf
+          data_type: map-fixed
+          required: false
+          man: Как правильно вводить значения описано здесь (https://www.postgresql.org/docs/current/runtime-config.html)<br/>**Новые настройки можно добавить по запросу**
+          sort: 50
+          sub_params:
+            - id: 475
+              code: log_connections
+              data_type: string
+              required: false
+              default: ""
+              value_list:
+                - "off"
+                - "on"
+              is_modifiable: false
+            - id: 476
+              code: log_disconnections
+              data_type: string
+              required: false
+              default: ""
+              value_list:
+                - "off"
+                - "on"
+              is_modifiable: false
+            - id: 736
+              code: max_connections
+              data_type: integer &gt; 0
+              required: false
+              default: ""
+              is_modifiable: false
+        - id: 806
+          code: backupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 60
+          sub_params:
+            - id: 159
+              code: s3Uid
+              data_type: uuid
+              required: true
+              default: ""
+              man: Экземпляр S3 обязателен
+              is_modifiable: false
+            - id: 160
+              code: retain
+              data_type: integer &gt; 0
+              required: true
+              default: "7"
+              is_modifiable: false
+            - id: 161
+              code: schedule
+              data_type: string
+              required: true
+              default: 0 0 * * *
+              regex: ^((((\d+,)+\d+|(\d+(\/|-|#)\d+)|(\d+L?)|(\*(\/\d+)?)|(L(-\d+)?)|(\?)|([A-Z]{3}(-[A-Z]{3})?)) ?){5,7})|(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every (\d+(ns|us|µs|ms|s|m|h))+)$
+              is_modifiable: false
+            - id: 699
+              code: incrementCount
+              data_type: integer &gt;= 0
+              required: false
+              default: ""
+              is_modifiable: false
+        - id: 807
+          code: autoscaleConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 70
+          sub_params:
+            - id: 162
+              code: enabled
+              data_type: boolean
+              required: true
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              man: Включает автоскейлинг PV. При включении параметра необходимо настроить autoScalePercentage и autoScaleTechWindow. Алерт при срабатывании вызывает modify у текущей услуги
+              is_modifiable: false
+            - id: 163
+              code: schedule
+              data_type: integer &gt;= 0
+              required: true
+              default: "0"
+              value_list:
+                - "0"
+                - "5"
+                - "12"
+                - "23"
+              man: Требует включения autoScale. Окно обновления (пока не реализовано). Указывается час в виде Integer (0 / 5 / 12 / 23)
+              is_modifiable: false
+            - id: 164
+              code: quota
+              data_type: integer &gt; 0
+              required: true
+              default: "100"
+              man: До какого размера возможно увеличивать диск, когда включен Autoscale
+              is_modifiable: false
+            - id: 165
+              code: percent
+              data_type: integer &gt; 0
+              required: true
+              default: "10"
+              value_list:
+                - "10"
+                - "15"
+                - "20"
+              man: Требует включения autoScale. Позволяет указать в процентах расширение от текущего макс объема<br/>Минимальный размер на который расширяется - **1Gb**
+              is_modifiable: false
+        - id: 1106
+          code: mtlsConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 80
+          sub_params:
+            - id: 643
+              code: type
+              data_type: string
+              required: true
+              default: "off"
+              value_list:
+                - "off"
+                - manual
+                - auto
+              man: '`off` - Настройка MTLS производиться не будет<br/>`manual` - После создания кластера в полях данных будет запрос на создание сертификата. **Вам необходимо будет выписать сертификат через вашу CA** и уже после включить через операцию **modify** режим MTLS<br/>`auto` - Сертификаты будут созданы через Cert-Manager<br/><br/>Режимы **auto** и **manual** требует включить настройку `Включить sslMode` - **true**<br/>MTLS в режиме **auto** будет работать сразу, в режиме **manual** только после того как будет предоставлен **CA** и **Сертификат сервера**'
+              is_modifiable: false
+            - id: 644
+              code: durationCA
+              data_type: integer &gt; 0
+              required: true
+              default: "175200"
+              man: Указывается в **часах**<br/>Необходимо настраивать, когда параметр `Режим настройки` - **auto**
+              is_modifiable: false
+            - id: 645
+              code: durationServer
+              data_type: integer &gt; 0
+              required: true
+              default: "87600"
+              man: Указывается в **часах**<br/>Не может быть больше чем время жизни СА<br/>Обновляется **раз в год**, если выставлено значение **более 2 лет**<br/>Обновляется **раз в пол года**, если выставлено значение **менее 2 лет**<br/>Необходимо настраивать, когда параметр `Режим настройки` - **auto**
+              is_modifiable: false
+    - name: restart
+      id: 54
+      kind: action
+      action: restart
+      man: ВНИМАНИЕ - Рестарт предполагает УДАЛЕНИЕ подов.<br/>Может быть полная поломка. Крайне осторожно запускать при работе
+      params: []
+    - name: resume
+      id: 114
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 115
+      kind: instance
+      action: suspend
+      params: []

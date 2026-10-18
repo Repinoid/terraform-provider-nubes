@@ -1,0 +1,198 @@
+name: llm_ai
+service_id: 163
+service_display_name: ML Улей
+service_short_name: llmAi
+service_man: '## 1. Общая информация<br/><br/>LLMaaS (Large Language Model as a Service) — это сервис для доступа к языковым моделям через OpenAI-совместимое API.<br/>Платформа позволяет создавать организации (тенанты), команды, выпускать и управлять API-ключами, устанавливать лимиты на использование.<br/><br/>### Ограничение: одна организация на контрагента<br/><br/>На одного контрагента может быть создана **только одна организация** в LLMaaS.<br/>Повторная попытка создать организацию для того же контрагента завершится ошибкой.<br/><br/>### Возможные ошибки и как их обрабатывать<br/><br/>При работе с сервисом могут возникнуть типовые ошибки. Ниже описано, как их распознать и что делать.<br/><br/>| Ошибка | Когда возникает | Что делать |<br/>|--------|-----------------|------------|<br/>| `Организация в LLMaaS уже привязана к контрагенту &lt;contragentCode&gt;` | При операции `create`, если организация для данного контрагента уже существует | На одного контрагента допускается только одна организация. Если нужно изменить существующую организацию, используйте операции управления командами и ключами |<br/>| `Не хватает нужного гранта. Примените реконсиляцию для данного инстанса` | При операциях `create_team`, `modify_team`, если модель не выдана организации на Layer 1 | Запустите операцию `reconcile` для данного инстанса. Она обновит список моделей, доступных организации, после чего повторите исходную операцию |<br/>| `Лимиты API-ключа не могут превышать лимиты команды` | При операциях `create_secrets`, `update_secrets` | Уменьшите значения `RPM` и/или `TPM` ключа до уровня команды или увеличьте лимиты самой команды через `modify_team` |<br/><br/>---<br/><br/>## Доступные операции<br/><br/>- **create**          — Создание организации в LLMaaS<br/>- **delete**          — Удаление организации<br/><br/>- **create_team**     — Создание команды внутри организации<br/>- **modify_team**     — Редактирование команды (модели, RPM, TPM)<br/>- **delete_team**     — Удаление команды<br/><br/>- **create_secrets**  — Создание API-ключа<br/>- **update_secrets**  — Обновление параметров API-ключа<br/>- **delete_secrets**  — Удаление API-ключа<br/><br/>- **reconcile**       — Обновление списка моделей, доступных организации<br/><br/>---<br/><br/>## 2. Параметры создания организации<br/><br/>Ниже перечислены параметры, которые необходимо указать при создании организации:<br/><br/>* **Платформа для развертывания**<br/>  Выбирается автоматически, изменять не нужно.<br/><br/>## 3. Параметры создания команды<br/><br/>* **Имя команды**<br/>  Уникальное имя команды в рамках организации.<br/>  Пример: `production`<br/><br/>* **Модель**<br/>  Название модели, доступной для команды.<br/>  Пример: `gpt-oss-120b`<br/><br/>* **Лимит запросов в минуту (RPM)**<br/>  Максимальное количество запросов к API в минуту.<br/>  Пример: `60`<br/><br/>* **Лимит токенов в минуту (TPM)**<br/>  Максимальное количество токенов (входящих + исходящих) в минуту.<br/>  Пример: `100000`<br/><br/>---<br/><br/>## 4. Параметры редактирования команды<br/><br/>Для существующей команды можно изменить:<br/><br/>* **Модель**<br/>  Новая модель для команды.<br/>  Пример: `gpt-oss-20b`<br/><br/>* **Лимит запросов в минуту (RPM)**<br/>  Новое значение RPM.<br/>  Пример: `120`<br/><br/>* **Лимит токенов в минуту (TPM)**<br/>  Новое значение TPM.<br/>  Пример: `200000`<br/><br/>---<br/><br/>## 5. Параметры создания API-ключа<br/><br/>Ниже перечислены параметры, которые необходимо указать при создании API-ключа:<br/><br/>* **Имя ключа**<br/>  Уникальное имя ключа в рамках организации.<br/>  Пример: `prod-key`<br/><br/>* **Команда**<br/>  Имя команды для привязки ключа. Если не указано — ключ привязывается к команде `main`.<br/>  Пример: `production`<br/><br/>* **Модель**<br/>  Название модели, доступной для данного ключа.<br/>  Пример: `gpt-oss-120b`<br/><br/>* **Лимит запросов в минуту (RPM)**<br/>  Максимальное количество запросов к API в минуту.<br/>  Пример: `60`<br/><br/>* **Лимит токенов в минуту (TPM)**<br/>  Максимальное количество токенов (входящих + исходящих) в минуту.<br/>  Пример: `100000`<br/><br/>**Важно:** Лимиты API-ключа не могут превышать лимиты команды, к которой он привязан.<br/>При превышении операция будет отклонена с ошибкой.<br/>Перед созданием ключа убедитесь, что `RPM &lt;= team.RPM` и `TPM &lt;= team.TPM`.<br/><br/><br/>---<br/><br/>## 6. Параметры обновления API-ключа<br/><br/>Для уже существующего ключа можно изменить параметры. Все параметры являются опциональными:<br/><br/>* **Имя ключа**<br/>  Имя обновляемого ключа.<br/>  Пример: `prod-key`<br/><br/>* **Модель**<br/>  Новое название модели.<br/>  Пример: `gpt-oss-20b`<br/><br/>* **Лимит запросов в минуту (RPM)**<br/>  Новое значение RPM.<br/>  Пример: `120`<br/><br/>* **Лимит токенов в минуту (TPM)**<br/>  Новое значение TPM.<br/>  Пример: `200000`<br/><br/>**Важно:** При обновлении лимитов API-ключа новые значения не могут превышать лимиты команды.<br/>Если указать значения выше командных, операция завершится ошибкой.<br/>Указывайте `RPM &lt;= team.RPM` и `TPM &lt;= team.TPM`.<br/><br/>Команда определяется автоматически по стейту услуги — изменить привязку к другой команде через эту операцию нельзя.<br/><br/>---<br/><br/>## 7. Параметры удаления API-ключа<br/><br/>* **Команда**<br/>  Имя команды, к которой привязан ключ.<br/>  Пример: `production`<br/><br/>* **Имя ключа**<br/>  Имя удаляемого ключа.<br/>  Пример: `prod-key`<br/><br/>---<br/><br/>## 8. Параметры удаления команды<br/><br/>* **Имя команды**<br/>  Имя удаляемой команды.<br/>  Пример: `production`<br/><br/>---<br/><br/>## 9. Параметры удаления организации<br/><br/>Удаление организации не требует дополнительных параметров — удаляется вся организация со всеми командами и ключами.<br/><br/>---<br/><br/>## 10. Выходные параметры<br/><br/>После успешного создания организации платформа возвращает:<br/><br/>* **connectionUrl**<br/>  URL для доступа к inference API (OpenAI-совместимый).<br/>  Пример: `https://api.aillm.ru`<br/><br/>---<br/><br/><br/>## 11. Пример использования API<br/><br/>После получения API-ключа клиент может обращаться к LLMaaS напрямую:<br/><br/>**Запрос к chat completions:**<br/><br/>```bash<br/>curl https://api.aillm.ru/v1/chat/completions \<br/>  -H &quot;Authorization: Bearer sk-...&quot; \<br/>  -H &quot;Content-Type: application/json&quot; \<br/>  -d ''{<br/>    &quot;model&quot;: &quot;gpt-oss-120b&quot;,<br/>    &quot;messages&quot;: [<br/>      {&quot;role&quot;: &quot;user&quot;, &quot;content&quot;: &quot;Привет!&quot;}<br/>    ]<br/>  }''<br/>```<br/><br/>**Получение списка доступных моделей:**<br/><br/>```bash<br/>curl https://api.aillm.ru/v1/models \<br/>  -H &quot;Authorization: Bearer sk-...&quot;<br/>```<br/>'
+lifecycle:
+    suspend_on_destroy_default: false
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 271
+      kind: instance
+      action: create
+      params:
+        - id: 826
+          code: resourceRealm
+          data_type: string
+          required: true
+          default: llmAi.aillm.ru
+          value_list:
+            - llmAi.aillm.ru
+          func: getAvailableResourceRealms
+    - name: create_secrets
+      id: 274
+      kind: subresource
+      action: create
+      subresource: secrets
+      params:
+        - id: 833
+          code: models
+          data_type: array
+          required: true
+          sort: 20
+          depends_on: teamName
+        - id: 834
+          code: rpmLimit
+          data_type: integer &gt; 0
+          required: true
+          default: "60"
+          minvalue: 1
+        - id: 835
+          code: tpmLimit
+          data_type: integer &gt; 0
+          required: true
+          default: "100000"
+          minvalue: 1
+        - id: 857
+          code: keyName
+          data_type: string
+          required: true
+          regex: ^[a-zA-Z0-9]+$
+          descr: Разрешены только латинские буквы и цифры без пробелов
+          sort: 10
+        - id: 859
+          code: teamName
+          data_type: string
+          required: true
+          sort: 15
+    - name: create_team
+      id: 278
+      kind: subresource
+      action: create
+      subresource: team
+      params:
+        - id: 858
+          code: teamName
+          data_type: string
+          required: true
+          regex: ^[a-zA-Z0-9]+$
+          descr: Разрешены только латинские буквы и цифры без пробелов
+        - id: 860
+          code: models
+          data_type: array
+          required: true
+        - id: 861
+          code: rpmLimit
+          data_type: integer &gt; 0
+          required: true
+          default: "60"
+        - id: 862
+          code: tpmLimit
+          data_type: integer &gt; 0
+          required: true
+          default: "100000"
+    - name: delete
+      id: 273
+      kind: instance
+      action: delete
+      params: []
+    - name: delete_secrets
+      id: 275
+      kind: subresource
+      action: delete
+      subresource: secrets
+      params:
+        - id: 836
+          code: keyName
+          data_type: string
+          required: true
+          depends_on: teamName
+        - id: 876
+          code: teamName
+          data_type: string
+          required: true
+          sort: 10
+    - name: delete_team
+      id: 280
+      kind: subresource
+      action: delete
+      subresource: team
+      params:
+        - id: 868
+          code: teamName
+          data_type: string
+          required: true
+    - name: modify_team
+      id: 279
+      kind: subresource
+      action: modify
+      subresource: team
+      params:
+        - id: 864
+          code: teamName
+          data_type: string
+          required: true
+        - id: 865
+          code: models
+          data_type: array
+          required: true
+          depends_on: teamName
+        - id: 873
+          code: rpmLimit
+          data_type: integer &gt; 0
+          required: true
+          default: "60"
+          minvalue: 1
+        - id: 874
+          code: tpmLimit
+          data_type: integer &gt; 0
+          required: true
+          default: "100000"
+          minvalue: 1
+    - name: reconcile
+      id: 412
+      kind: action
+      action: reconcile
+      params: []
+    - name: update_secrets
+      id: 277
+      kind: subresource
+      action: update
+      subresource: secrets
+      man: Данная операция предназначена для управления лимитами и моделями
+      params:
+        - id: 852
+          code: keyName
+          data_type: string
+          required: true
+          depends_on: teamName
+        - id: 853
+          code: models
+          data_type: array
+          required: true
+          depends_on: teamName
+        - id: 854
+          code: rpmLimit
+          data_type: integer &gt; 0
+          required: true
+          default: "60"
+        - id: 855
+          code: tpmLimit
+          data_type: integer &gt; 0
+          required: true
+          default: "100000"
+        - id: 875
+          code: teamName
+          data_type: string
+          required: true
+          sort: 5

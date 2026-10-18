@@ -1,0 +1,487 @@
+name: nextcloud
+service_id: 50
+service_display_name: Nextcloud
+service_short_name: nextcloud
+service_man: '# Инструкция по развертыванию Nextcloud через платформу<br/><br/>## 1. Общая информация<br/><br/>Nextcloud — платформа для хранения и совместной работы с файлами. Разворачивается в K8s через Helm-чарт `nextcloud/nextcloud`.<br/><br/>Сервис **не самодостаточен** — для создания необходимы заранее развёрнутые в той же ресурсной платформе:<br/><br/>* **PostgreSQL (k8s)** — база данных Nextcloud. У СУБД должен быть выставлен параметр `sslRequired: false`.<br/>* **Redis (k8s)** — используется как memcache/locking backend.<br/><br/>Резервное копирование выполняется через **Velero** (бэкапятся под и PVC с данными), а не штатным S3-бэкапом СУБД.<br/><br/>### Доступные операции с сервисом<br/><br/>* **create**        — создание сервиса<br/>* **delete**         — удаление сервиса<br/>* **suspend**        — остановка сервиса (масштабирование реплик в 0)<br/>* **resume**         — запуск сервиса<br/>* **restart**        — перезапуск (`kubectl rollout restart`)<br/>* **modify**         — изменение настроек сервиса<br/>* **reconcile**      — служебная операция синхронизации версии (запускается платформой автоматически)<br/>* **create_backup**  — создание резервной копии вручную (через Velero)<br/>* **recovery**       — восстановление из резервной копии в **новый** инстанс<br/><br/>&gt; **Примечание:** операций работы с пользователями Nextcloud (`create_user`/`modify_user`/`delete_user`) на уровне платформы нет — пользователи приложения администрируются внутри самого Nextcloud.<br/><br/>---<br/><br/>## 2. Параметры создания сервиса<br/><br/>### Платформа для развертывания<br/><br/>Ресурсная платформа (`resourceRealm`), в которой будет развёрнут сервис. PostgreSQL и Redis, указанные ниже, обязаны находиться в той же ресурсной платформе.<br/><br/>### СУБД PostgreSQL (psqlUid)<br/><br/>UID инстанса PostgreSQL (k8s), в котором будет создана база и пользователь `nextcloud`.<br/><br/>* У выбранной СУБД должна отсутствовать база `nextcloud` и пользователь `nextcloud`.<br/>* У СУБД обязан быть выключен `sslRequired` (`false`).<br/><br/>### СУБД Redis (redisUid)<br/><br/>UID инстанса Redis (k8s), который будет использоваться как memcache/locking backend.<br/><br/>### Количество реплик<br/><br/>Количество реплик Nextcloud (`clusterConfiguration.replicas`).<br/><br/>### Квота памяти пода (MB)<br/><br/>Объём памяти для пода Nextcloud в мегабайтах.<br/>Пример: `2048`<br/><br/>### Квота CPU пода (mCPU)<br/><br/>CPU-квота для пода Nextcloud в миликорах (1000 mCPU = 1 vCPU).<br/>Пример: `1000`<br/><br/>### Размер диска для данных (GB)<br/><br/>Объём диска под данные Nextcloud (`/var/www/html/data`) в гигабайтах.<br/>Пример: `20`<br/><br/>### Домен<br/><br/>Домен, на котором будет доступен Nextcloud (`accessConfiguration.domain`).<br/><br/>* Если указано **полное доменное имя** (содержит точку, например `cloud.company.ru`) — домен считается клиентским. Перед созданием клиент обязан сам настроить DNS-запись, указывающую на адрес Ingress платформы, иначе создание завершится ошибкой.<br/>* Если указано **короткое имя** (без точки, например `mycloud`) — платформа сама создаёт DNS-запись вида `&lt;domain&gt;.nextcloudk8s` и настраивает сертификат.<br/><br/>### Версия<br/><br/>Версия приложения Nextcloud (`appConfiguration.version`, поле `appVersion` Helm-чарта). По ней автоматически подбирается последняя подходящая версия Helm-чарта.<br/><br/>&gt; **Примечание:** список поддерживаемых версий и допустимые шаги обновления заданы в `pipelines/stages/functions/helm.groovy` (см. раздел 13).<br/><br/>### Document Server<br/><br/>Параметр `appConfiguration.documentServer`. Если указать `collabora` — в кластер дополнительно разворачивается Collabora Online (совместное редактирование офисных документов), доступный по пути `/collabora` на том же домене.<br/>Оставьте пустым, если Document Server не нужен.<br/><br/>### Уровень логирования<br/><br/>Параметр `appConfiguration.logLevel`. Одно из значений: `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`, либо `NONE` — чтобы не переопределять логирование Nextcloud.<br/><br/>---<br/><br/>## 3. Параметры модификации сервиса<br/><br/>Изменению подлежат ресурсы, версия и часть `appConfiguration`. Параметры `psqlUid`/`redisUid` менять после создания не рекомендуется.<br/><br/>### Количество реплик<br/><br/>См. раздел 2.<br/><br/>### Квота памяти пода (MB) / Квота CPU пода (mCPU) / Размер диска (GB)<br/><br/>См. раздел 2.<br/><br/>&gt; **Примечание:** уменьшить уже выделенный размер диска нельзя.<br/><br/>### Версия<br/><br/>Обновление версии разрешено только **на один патч** либо **на одну минорную версию вперёд** (с `patch=0`). Прыжок сразу через несколько минорных версий или через несколько мажорных версий запрещён — обновляться нужно последовательно.<br/><br/>&gt; **Примечание:** перед обновлением на новую minor/major-версию необходимо сначала выполнить `modify` на текущей версии, обновившись до последнего релиза этой версии (иначе операция завершится ошибкой с описанием, до какой версии нужно обновиться сначала).<br/><br/>### Document Server / Уровень логирования<br/><br/>См. раздел 2.<br/><br/>---<br/><br/>## 4. Параметры удаления сервиса<br/><br/>Специальных параметров нет — удаление сносит namespace целиком.<br/><br/>&gt; **Примечание:** резервные копии, созданные через `create_backup`, хранятся в Velero отдельно от инстанса и **не удаляются** вместе с сервисом — операции `delete_backup` для Nextcloud нет, копии нужно вычищать на стороне Velero отдельно.<br/><br/>---<br/><br/>## 5. Параметры создания бэкапа<br/><br/>Специальных пользовательских параметров нет — имя бэкапа генерируется автоматически в формате `&lt;дата&gt;-&lt;версия&gt;-&lt;namespace&gt;`.<br/><br/>&gt; **Примечание:** создать бэкап можно только если сервис предварительно приостановлен (`suspend`). Velero, в который создаётся бэкап, должен быть развёрнут в той же ресурсной платформе, что и Nextcloud, и не может быть сменён на другой Velero-инстанс в рамках одного сервиса.<br/><br/>Бэкапится под с данными вместе с PVC/PV (файлы), метаданные и БД PostgreSQL бэкапом не затрагиваются — версия схемы БД фиксируется отдельно (см. раздел 6).<br/><br/>---<br/><br/>## 6. Параметры восстановления из бэкапа (recovery)<br/><br/>В отличие от СУБД-сервисов, `recovery` у Nextcloud **не восстанавливает данные в текущий инстанс**, а создаёт **новый** инстанс сервиса (аналог `create`), в который переносятся файлы из указанной резервной копии.<br/><br/>### Точка восстановления (recoveryPoint)<br/><br/>Имя резервной копии Velero, из которой будет выполнено восстановление.<br/><br/>### Домен нового инстанса<br/><br/>Обязан отличаться от домена исходного (текущего) инстанса — восстановление на тот же домен не поддерживается.<br/><br/>### СУБД PostgreSQL нового инстанса<br/><br/>Если версия Nextcloud в бэкапе отличается от текущей версии инстанса, для нового инстанса обязательно нужно указать **другую** СУБД PostgreSQL (нельзя восстанавливать бэкап со старой схемой БД поверх БД с более новой схемой).<br/><br/>---<br/><br/>## 7. Выходные параметры<br/><br/>После успешного создания сервиса платформа возвращает:<br/><br/>### connectionUrl<br/><br/>Адрес для входа в Nextcloud: `https://&lt;домен&gt;`.<br/><br/>### namespace<br/><br/>Namespace в K8s-кластере, в котором развёрнут сервис.<br/><br/>### Учётные данные (Vault)<br/><br/>В Vault сохраняется пароль администратора (`adminPass`) под логином `admin`.<br/><br/>---<br/><br/>## 8. Пример подключения<br/><br/>Откройте `connectionUrl` в браузере и авторизуйтесь:<br/><br/>* **Логин:** `admin`<br/>* **Пароль:** значение `adminPass` из блока «Учётные данные» в Vault<br/><br/>---<br/><br/>## 9. Дополнительная информация<br/><br/>### Зависимости<br/><br/>Nextcloud нельзя создать без уже существующих в том же `resourceRealm` сервисов PostgreSQL (k8s, `sslRequired: false`) и Redis (k8s). При `delete` зависимые СУБД и Redis не трогаются — удаляется только сам Nextcloud.<br/><br/>### suspend/resume<br/><br/>При `suspend` количество реплик Nextcloud, Collabora и exporter''а метрик принудительно выставляется в `0` через `helm upgrade` (реальное масштабирование, а не просто пауза cron). При `resume` реплики возвращаются к значению из `clusterConfiguration.replicas`.<br/><br/>### Collabora<br/><br/>Собирается из отдельного `image.repository: nexus-sa.tst.nubes.ru/collabora/code` и включается только при `appConfiguration.documentServer == ''collabora''`. Доступен на том же домене и том же TLS-сертификате, что и сам Nextcloud, по пути `/collabora`.<br/><br/>### Бэкап/восстановление через Velero<br/><br/>Бэкап/восстановление файлов идёт через Velero с селектором `backup=&lt;serviceName&gt;-velero-backup` и включает под, PVC и PV — то есть непосредственно файлы `/var/www/html/data`. Восстановление БД в новый инстанс выполняется штатным механизмом `create` с параметром `instanceUidFrom`, который проставляет `recovery`-джоба автоматически.<br/>'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 16
+      kind: instance
+      action: create
+      man: Для установки необходимо:<br/>- ресурсная платформа, где разворачивается Nextcloud, обязана совпадать с ресурсными платформами, где развёрнут Redis и PostgreSQL
+      params:
+        - id: 1055
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 492
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - iot-naeel
+                - k8s-3-sandbox-nubes-ru
+                - k8s-4-sandbox-nubes-ru
+              man: Кластер Kubernetes, на котором будет развернут экземпляр
+              is_modifiable: false
+            - id: 493
+              code: psqlEnabled
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "true"
+              man: Инстанс обязан быть развёрнут на той же ресурсной платформе, где и будет располагаться Nextcloud
+              is_modifiable: false
+            - id: 494
+              code: redisEnabled
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "true"
+              man: Инстанс обязан быть развёрнут на той же ресурсной платформе, где и будет располагаться Nextcloud
+              is_modifiable: false
+            - id: 495
+              code: psqlUid
+              data_type: uuid
+              required: true
+              default: ""
+              man: Необходимо выбирать, когда выбран параметр `Подключить PostgreSQL из Личного кабинета`
+              is_modifiable: false
+            - id: 496
+              code: redisUid
+              data_type: uuid
+              required: true
+              default: ""
+              man: Необходимо выбирать, когда выбран параметр `Подключить Redis из Личного кабинета`
+              is_modifiable: false
+        - id: 1056
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          is_modifiable: true
+          sub_params:
+            - id: 497
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "1000"
+              value_list:
+                - "1000"
+                - "2000"
+                - "3000"
+                - "4000"
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 498
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "1024"
+              value_list:
+                - "1024"
+                - "2048"
+                - "3072"
+                - "4096"
+                - "5120"
+                - "6144"
+                - "7168"
+                - "8192"
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 499
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              value_list:
+                - "1"
+                - "2"
+              is_modifiable: false
+            - id: 500
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: "10"
+              man: Указывается в GIGAbytes<br/>На данном диске хранятся данные Nextcloud
+              is_modifiable: false
+        - id: 1057
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          sub_params:
+            - id: 501
+              code: domain
+              data_type: string
+              required: true
+              default: nextcloud-l9q2wklv
+              man: 'Если указан FQDN в формате: `myapp.example.com`, предварительно будет проверяться DNS-запись (А-запись **должна смотреть на IP Ingress кластера ресурсной платформы**)<br/><br/>Если указан в формате `myapp`, DNS-запись будет автоматически создана в служебной DNS-зоне'
+              is_modifiable: false
+        - id: 1058
+          code: appConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 40
+          is_modifiable: true
+          sub_params:
+            - id: 502
+              code: version
+              data_type: string
+              required: true
+              default: 33.0.4
+              value_list:
+                - 33.0.4
+              is_modifiable: false
+            - id: 503
+              code: documentServer
+              data_type: string
+              required: true
+              default: collabora
+              value_list:
+                - collabora
+              man: Выбор сервера документов (onlyoffice)/(collabora). onlyoffice пока не доступен<br/>Размер пода collabora:<br/>1.8 ядра. 2Gi ОЗУ
+              is_modifiable: false
+            - id: 549
+              code: logLevel
+              data_type: string
+              required: true
+              default: INFO
+              value_list:
+                - DEBUG
+                - INFO
+                - WARN
+                - ERROR
+                - FATAL
+                - NONE
+              man: Включает отображение логов самого nextcloud<br/>Логи уходят в /dev/stdout контейнера<br/>`NONE` отключает логирование
+              is_modifiable: false
+    - name: create_backup
+      id: 404
+      kind: subresource
+      action: create
+      subresource: backup
+      man: Перед запуском обязательно надо перевести экземпляр Nextcloud в статус 'suspended'
+      params:
+        - id: 1077
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 578
+              code: veleroUid
+              data_type: string
+              required: true
+              default: ""
+              man: Предварительно необходимо создать инстанс услуги `Velero`<br/>Из этого инстанса будут взяты точки восстановления<br/>Если восстановление производится на другую ресурсную платформу, важно чтобы предварительно все компоненты связующие были либо перенесены, либо были доступны снаружи
+              is_modifiable: false
+    - name: delete
+      id: 17
+      kind: instance
+      action: delete
+      man: DEV-Ветка удаления Nextcloud
+      params: []
+    - name: modify
+      id: 67
+      kind: instance
+      action: modify
+      params:
+        - id: 1059
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 504
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1000"
+                - "2000"
+                - "3000"
+                - "4000"
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 505
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1024"
+                - "2048"
+                - "3072"
+                - "4096"
+                - "5120"
+                - "6144"
+                - "7168"
+                - "8192"
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 506
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1"
+                - "2"
+              is_modifiable: false
+            - id: 507
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в GIGAbytes<br/>На данном диске хранятся данные Nextcloud
+              is_modifiable: false
+        - id: 1060
+          code: appConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 508
+              code: version
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - 33.0.4
+              is_modifiable: false
+            - id: 509
+              code: documentServer
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - collabora
+              man: Выбор сервера документов (onlyoffice)/(collabora). onlyoffice пока не доступен<br/>Размер пода collabora:<br/>1.8 ядра. 2Gi ОЗУ
+              is_modifiable: false
+            - id: 550
+              code: logLevel
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - DEBUG
+                - INFO
+                - WARN
+                - ERROR
+                - FATAL
+                - NONE
+              man: Включает отображение логов самого nextcloud<br/>Логи уходят в /dev/stdout контейнера<br/>`NONE` отключает логирование
+              is_modifiable: false
+    - name: reconcile
+      id: 390
+      kind: action
+      action: reconcile
+      params: []
+    - name: recovery
+      id: 406
+      kind: action
+      action: recovery
+      params:
+        - id: 1078
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 556
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - iot-naeel
+                - k8s-3-sandbox-nubes-ru
+                - k8s-4-sandbox-nubes-ru
+              man: Кластер Kubernetes, на котором будет развернут экземпляр
+              is_modifiable: false
+            - id: 557
+              code: psqlEnabled
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "true"
+              man: Инстанс обязан быть развёрнут на той же ресурсной платформе, где и будет располагаться Nextcloud
+              is_modifiable: false
+            - id: 558
+              code: redisEnabled
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "true"
+              man: Инстанс обязан быть развёрнут на той же ресурсной платформе, где и будет располагаться Nextcloud
+              is_modifiable: false
+            - id: 559
+              code: recoveryPoint
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 560
+              code: psqlUid
+              data_type: uuid
+              required: true
+              default: ""
+              man: Необходимо выбирать, когда выбран параметр `Подключить PostgreSQL из Личного кабинета`<br/>Если откат производится на ту же версию Nextcloud, в теории возможно развернуться в существующую базу<br/><br/>Предпочтительно создать отдельный инстанс PostgreSQL, который был восстановлен также через Recovery
+              is_modifiable: false
+            - id: 561
+              code: redisUid
+              data_type: uuid
+              required: true
+              default: ""
+              man: Необходимо выбирать, когда выбран параметр `Подключить Redis из Личного кабинета`
+              is_modifiable: false
+            - id: 570
+              code: veleroUid
+              data_type: string
+              required: true
+              default: ""
+              man: Из этого инстанса будут взяты точки восстановления<br/>Если восстановление производится на другую ресурсную платформу, важно чтобы предварительно все компоненты связующие были либо перенесены, либо были доступны снаружи
+              is_modifiable: false
+        - id: 1079
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 562
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1000"
+                - "2000"
+                - "3000"
+                - "4000"
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 563
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1024"
+                - "2048"
+                - "3072"
+                - "4096"
+                - "5120"
+                - "6144"
+                - "7168"
+                - "8192"
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 564
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: 1,2
+              is_modifiable: false
+            - id: 565
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: "10"
+              man: Указывается в GIGAbytes<br/>На данном диске хранятся данные Nextcloud
+              is_modifiable: false
+        - id: 1080
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          sub_params:
+            - id: 566
+              code: domain
+              data_type: string
+              required: true
+              default: nextcloud-rowbayfb
+              man: 'Если указан FQDN в формате: `myapp.example.com`, предварительно будет проверяться DNS-запись (А-запись **должна смотреть на IP Ingress кластера ресурсной платформы**)<br/><br/>Если указан в формате `myapp`, DNS-запись будет автоматически создана в служебной DNS-зоне'
+              is_modifiable: false
+        - id: 1081
+          code: appConfiguration
+          data_type: map-fixed
+          required: true
+          man: Версия Nextcloud будет взята из бэкапа
+          sort: 40
+          sub_params:
+            - id: 567
+              code: documentServer
+              data_type: string
+              required: true
+              default: collabora
+              value_list:
+                - collabora
+              man: Выбор сервера документов (onlyoffice)/(collabora). onlyoffice пока не доступен<br/>Размер пода collabora:<br/>1.8 ядра. 2Gi ОЗУ
+              is_modifiable: false
+            - id: 568
+              code: logLevel
+              data_type: string
+              required: true
+              default: NONE
+              value_list:
+                - DEBUG
+                - INFO
+                - WARN
+                - ERROR
+                - FATAL
+                - NONE
+              man: Включает отображение логов самого nextcloud<br/>Логи уходят в /dev/stdout контейнера<br/>`NONE` отключает логирование
+              is_modifiable: false
+            - id: 569
+              code: version
+              data_type: string
+              required: false
+              default: ""
+              man: Версия Nextcloud будет исправлена на ту версию, которая указана в бэкапе
+              is_modifiable: false
+    - name: restart
+      id: 66
+      kind: action
+      action: restart
+      params: []
+    - name: resume
+      id: 129
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 128
+      kind: instance
+      action: suspend
+      params: []
