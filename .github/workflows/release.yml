@@ -27,7 +27,7 @@ jobs:
       - name: Build and sign release assets
         env:
           SIGNING_KEY: ${{ secrets.PROVIDER_GPG_PRIVATE_KEY }}
-          SIGNING_KEY_ID: ${{ secrets.PROVIDER_GPG_KEY_ID }}
+          SIGNING_KEY_ID: ${{ vars.PROVIDER_GPG_KEY_ID }}
           SIGNING_PASSPHRASE: ${{ secrets.PROVIDER_GPG_PASSPHRASE }}
         run: |
           test -n "$SIGNING_KEY"
