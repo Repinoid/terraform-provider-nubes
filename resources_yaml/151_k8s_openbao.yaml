@@ -1,0 +1,385 @@
+name: k8s_openbao
+service_id: 151
+service_display_name: Vault
+service_short_name: k8sOpenbao
+service_man: '# Инструкция по развертыванию Хранилища секретов через платформу<br/><br/>## 1. Общая информация<br/>Хранилище секретов — сервис централизованного и защищённого хранения чувствительных данных (секретов, ключей, конфигураций). Предназначен для использования приложениями и сервисами в Kubernetes с управлением доступом на основе ролей.<br/>В качестве приложения используется открытый проект OpenBao с поддержкой кластерного режима RAFT.<br/><br/>### Доступные операции<br/>**create** — Создание хранилища секретов и инициализация кластера.<br/>**delete** — Удаление хранилища секретов с полной очисткой всех связанных сущностей.<br/>**modify** — Изменение параметров развернутого хранилища секретов.<br/>**suspend** — Приостановка работы кластера без удаления Persistent Volume.<br/>**resume** — Возобновление работы кластера с автоматическим unseal всех нод.<br/>**restart** — Поочередный перезапуск нод с последующим подключением в кластер.<br/>**create_kv** — Создание Key/Value хранилища версии V2.<br/>**delete_kv** — Удаление Key/Value хранилища со всеми содержащимися секретами.<br/>**create_secrets** — Создание секрета внутри Key/Value хранилища.<br/>**delete_secrets** — Удаление секрета из Key/Value хранилища.<br/>**update_secrets** — Обновление значения секрета.<br/>**recovery_secrets** — Откат секрета к указанной версии.<br/>**create_role** — Создание роли для управления Key/Value хранилищем или секретами.<br/>**update_role** — Обновление параметров роли.<br/>**delete_role** — Удаление роли доступа.<br/><br/>---<br/><br/>## 2. Параметры развертывания<br/><br/>Параметры входных данных операции **create**:<br/><br/>### Платформа для развертывания<br/>Описание: Кластер Kubernetes, в котором будет развернуто приложение.<br/>Формат значения: имя Kubernetes-кластера.<br/><br/>### Имя домена<br/>Описание: Доменное имя сервиса. При указании полного FQDN выполняется проверка DNS A-записи или добавляется А-запись в техническую зону.<br/>Формат значения: secrets.domain.com / mysecretdomain.<br/><br/>### Кол-во реплик<br/>Описание: Количество узлов в кластере.<br/>Формат значения: целое число.<br/><br/>### Квота ядра пода<br/>Описание: Лимит CPU для одного узла. Указывается в milicores (1000 milicores = 1 CPU).<br/>Формат значения: целое число.<br/><br/>### Квота памяти пода<br/>Описание: Лимит оперативной памяти для одного узла. Указывается в megabytes.<br/>Формат значения: целое число.<br/><br/>### Размер диска под хранение секретов<br/>Описание: Объем диска для хранения данных. Фактический объем равен значению, умноженному на количество реплик. Указывается в Gigabytes<br/>Формат значения: целое число.<br/><br/>### Версия OpenBao<br/>Описание: Версия OpenBao для развертывания сервиса.<br/>Формат значения: выбор из предоставленного списка версий.<br/><br/>---<br/><br/>## 3. Рекомендованные характеристики<br/><br/>### Тестовое окружение<br/>Кол-во реплик: 2.<br/>Квота ядра пода: 200.<br/>Квота памяти пода: 256.<br/>Размер диска под хранение секретов: 1.<br/>Версия OpenBao: актуальная стабильная версия.<br/><br/>### Промышленное окружение<br/>Кол-во реплик: от 3.<br/>Квота ядра пода: от 1000.<br/>Квота памяти пода: от 1024.<br/>Размер диска под хранение секретов: от 10.<br/>Версия OpenBao: актуальная стабильная версия.<br/><br/>---<br/><br/>## 4. Выходные параметры<br/>Настройки внутри хранилища (kv/secrets/roles) — конфигурации Key/Value, секретов и ролей, созданные соответствующими операциями.<br/>Настройки самого хранилище (сайзинг, объемы) — параметры ресурсов и хранилища данных, примененные к сервису.<br/>Статус кластера (running / suspended) — текущее состояние работы кластера.<br/>url для подключения к веб — адрес веб-интерфейса сервиса.<br/><br/>---<br/><br/>## 5. Дополнительная информация<br/>При удалении хранилища все данные и настройки безвозвратно удаляются.<br/>При использовании доменного имени требуется корректная настройка DNS.<br/>Операции управления секретами и ролями выполняются только после успешного создания хранилища.<br/>Удаление кластера производится через операцию `suspend`, а удаление становится доступно через 14 дней после остановки кластера<br/>Правило выше не относится к операции `delete_kv` / `delete_secrets` / `delete_role`'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 210
+      kind: instance
+      action: create
+      params:
+        - id: 663
+          code: resourceRealm
+          data_type: string
+          required: true
+          default: k8s-4-ext-nubes-ru
+          value_list:
+            - k8s-4-ext-nubes-ru
+          func: getAvailableResourceRealms
+          descr: Кластер Kubernetes в котором будет развёрнуто приложение
+          man: Выбрать платформу из списка<br/><br/>**Если список не отображается**<br/>обратитесь к сервис менеджеру с вопросом предоставления ресурсной платформы
+          sort: 0
+        - id: 664
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: true
+          default: "500"
+          maxvalue: 8000
+          minvalue: 250
+          descr: 'Пример: `500`'
+          man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+          sort: 30
+          is_modifiable: true
+        - id: 665
+          code: resourceInstances
+          data_type: integer &gt; 0
+          required: true
+          default: "3"
+          maxvalue: 7
+          minvalue: 1
+          descr: 'Пример: `3`'
+          sort: 20
+          is_modifiable: true
+        - id: 666
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: true
+          default: "512"
+          maxvalue: 8192
+          minvalue: 256
+          descr: 'Пример: `2048`'
+          man: Указывается в Megabytes
+          sort: 40
+          is_modifiable: true
+        - id: 667
+          code: resourceDisk
+          data_type: integer &gt; 0
+          required: true
+          default: "10"
+          maxvalue: 999
+          minvalue: 1
+          descr: 'Пример: `10`'
+          man: Указывается в Gigabytes
+          sort: 50
+          is_modifiable: true
+        - id: 668
+          code: appVersion
+          data_type: string
+          required: true
+          default: 2.5.2
+          value_list:
+            - 2.5.2
+          descr: Выбрать из списка
+          sort: 60
+          is_modifiable: true
+        - id: 669
+          code: domain
+          data_type: string
+          required: true
+          default: bao-k8zxs9ho
+          regex: ^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
+          unique_scope: provider
+          man: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          sort: 10
+    - name: create_kv
+      id: 212
+      kind: subresource
+      action: create
+      subresource: kv
+      params:
+        - id: 675
+          code: kvName
+          data_type: string
+          required: true
+          default: kvname-bx3knzyo
+          regex: ^[a-zA-Z0-9-]{1,24}$
+          man: Будет создан `v2 тип движка`<br/><br/>Уникальное в рамках услуги
+          sort: 10
+    - name: create_policy
+      id: 237
+      kind: subresource
+      action: create
+      subresource: policy
+      params:
+        - id: 728
+          code: policySettings
+          data_type: array-map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 49
+              code: path
+              data_type: string
+              required: true
+              default: ""
+              man: 'Пример 1: `mykv/*`<br/>Пример 2: `mykv/path/*`<br/>Пример 3: `mykv/path/to/secret`<br/>'
+              is_modifiable: false
+            - id: 50
+              code: capabilities
+              data_type: json
+              required: true
+              default: '[&quot;read&quot;, &quot;list&quot;]'
+              man: 'Пример: `[&quot;create&quot;, &quot;read&quot;, &quot;update&quot;, &quot;delete&quot;, &quot;list&quot;, &quot;sudo&quot;]`<br/>Только чтение: `[&quot;list&quot;, &quot;read&quot;]`<br/>Изменение: `[&quot;read&quot;, &quot;list&quot;, &quot;create&quot;, &quot;update&quot;, &quot;delete&quot;]`'
+              is_modifiable: false
+        - id: 729
+          code: policyName
+          required: true
+          default: policy-eyd8rbp8
+          regex: ^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
+          man: Сделано для дальнейшего удобного использования
+          sort: 10
+    - name: create_secrets
+      id: 214
+      kind: subresource
+      action: create
+      subresource: secrets
+      params:
+        - id: 677
+          code: kvName
+          data_type: string
+          required: true
+          descr: Выберите из списка
+          man: Если список пустой, создайте kv через операцию `create_kv`
+          sort: 10
+        - id: 678
+          code: secretPath
+          data_type: string
+          required: true
+          default: path/to/mysecret
+          regex: ^[a-zA-Z0-9_-]+(?:\/[a-zA-Z0-9_-]+)*$
+          descr: 'Пример: `path` или `road/to/path`'
+          sort: 20
+        - id: 679
+          code: secretData
+          data_type: map
+          required: true
+          descr: Хотя бы один секрет необходимо добавить
+          man: Данные не сохраняются в ЛК, в дальнейшем при обновлении секретов это необходимо учитывать
+          sort: 30
+    - name: delete
+      id: 231
+      kind: instance
+      action: delete
+      params: []
+    - name: delete_kv
+      id: 213
+      kind: subresource
+      action: delete
+      subresource: kv
+      man: '**ОСТОРОЖНО**<br/>Удаление KV подразумевает удаление ВСЕХ secrets внутри этой KV'
+      params:
+        - id: 676
+          code: kvName
+          data_type: string
+          required: true
+          descr: Выберите из списка
+          sort: 10
+    - name: delete_policy
+      id: 239
+      kind: subresource
+      action: delete
+      subresource: policy
+      params:
+        - id: 732
+          code: policyName
+          data_type: string
+          required: true
+    - name: delete_secrets
+      id: 233
+      kind: subresource
+      action: delete
+      subresource: secrets
+      params:
+        - id: 726
+          code: kvName
+          data_type: string
+          required: true
+          descr: Выберите из списка
+          sort: 10
+        - id: 727
+          code: secretPath
+          data_type: string
+          required: true
+          descr: Выберите из списка
+          sort: 20
+          depends_on: kvName
+    - name: modify
+      id: 211
+      kind: instance
+      action: modify
+      params:
+        - id: 670
+          code: resourceInstances
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 7
+          minvalue: 1
+          descr: 'Пример: `3`'
+          sort: 10
+        - id: 671
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: true
+          default: "500"
+          maxvalue: 8000
+          minvalue: 250
+          descr: 'Пример: `500`'
+          man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+          sort: 20
+        - id: 672
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: true
+          default: "512"
+          maxvalue: 8192
+          minvalue: 256
+          descr: 'Пример: `2048`'
+          man: Указывается в Megabytes
+          sort: 30
+        - id: 673
+          code: resourceDisk
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 999
+          minvalue: 1
+          descr: 'Пример: `10`'
+          man: Указывается в Gigabytes
+          sort: 40
+        - id: 674
+          code: appVersion
+          data_type: string
+          required: true
+          value_list:
+            - 2.5.2
+          descr: Выбрать из списка
+          sort: 50
+    - name: reconcile
+      id: 236
+      kind: action
+      action: reconcile
+      params: []
+    - name: recovery_secrets
+      id: 232
+      kind: subresource
+      action: recovery
+      subresource: secrets
+      man: Данная операция подразумевает откат на конкретную версию в секрете.<br/><br/>**Это не восстановление удалённого секрета**
+      params:
+        - id: 723
+          code: kvName
+          data_type: string
+          required: true
+          descr: Выберите из списка
+          sort: 10
+        - id: 724
+          code: secretPath
+          data_type: string
+          required: true
+          descr: Выберите из списка
+          sort: 20
+          depends_on: kvName
+        - id: 725
+          code: secretVersion
+          data_type: string
+          required: true
+          depends_on: kvName,secretPath
+    - name: resume
+      id: 216
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 215
+      kind: instance
+      action: suspend
+      params: []
+    - name: update_policy
+      id: 238
+      kind: subresource
+      action: update
+      subresource: policy
+      params:
+        - id: 730
+          code: policyName
+          data_type: string
+          required: true
+          sort: 10
+        - id: 731
+          code: policySettings
+          data_type: array-map-fixed
+          required: true
+          descr: Производится полная перезапись политики!
+          sort: 20
+          sub_params:
+            - id: 51
+              code: path
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 52
+              code: capabilities
+              data_type: string
+              required: true
+              default: ""
+              man: 'Пример: `[&quot;create&quot;, &quot;read&quot;, &quot;update&quot;, &quot;delete&quot;, &quot;list&quot;, &quot;sudo&quot;]`<br/>Только чтение: `[&quot;list&quot;, &quot;read&quot;]`<br/>Изменение: `[&quot;read&quot;, &quot;list&quot;, &quot;create&quot;, &quot;update&quot;, &quot;delete&quot;]`'
+              is_modifiable: false
+    - name: update_secrets
+      id: 230
+      kind: subresource
+      action: update
+      subresource: secrets
+      params:
+        - id: 719
+          code: kvName
+          data_type: string
+          required: true
+          descr: Выберите из списка
+          sort: 10
+        - id: 720
+          code: secretPath
+          data_type: string
+          required: true
+          descr: Выберите из списка
+          man: Предварительно необходимо выбрать параметр `Имя Key/Value хранилища`
+          sort: 20
+          depends_on: kvName
+        - id: 721
+          code: needFullUpdateSecret
+          data_type: boolean
+          required: true
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          man: Если выбрать `true`, будет создана новая версия секрета `с нуля`<br/>Если выбрать `false`, будет создана новая версия секрета с данными прошлой ревизии, а переданные данные в операции либо будут модифицированы, либо будут добавлены
+          sort: 30
+        - id: 722
+          code: secretData
+          data_type: map
+          required: true
+          descr: Хотя бы один секрет необходимо добавить
+          sort: 40

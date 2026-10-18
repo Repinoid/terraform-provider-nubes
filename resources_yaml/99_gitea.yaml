@@ -1,0 +1,169 @@
+name: gitea
+service_id: 99
+service_display_name: Gitea
+service_short_name: gitea
+service_man: '# Инструкция по развертыванию Gitea через платформу<br/><br/>---<br/>## 1. Общая информация<br/>Gitea — это лёгкий, быстрый и самодостаточный сервис хостинга Git-репозиториев с веб-интерфейсом.<br/>Позволяет создавать и управлять репозиториями, организациями, командами, а также настраивать CI/CD через интеграции.<br/>Развёртывание полностью автоматизировано платформой.<br/><br/>## Доступные операции<br/>- **create**    — Создание сервиса Gitea<br/>- **delete**    — Удаление сервиса Gitea<br/>- **modify**    — Модификация сервиса Gitea<br/>- **suspend**   — Остановка сервиса Gitea<br/>- **resume**    — Запуск сервиса Gitea<br/><br/>---<br/>## 2. Параметры развертывания<br/>Ниже перечислены параметры, которые необходимо указать при создании ресурса Gitea:<br/><br/>* **Платформа для развертывания:**<br/>  Платформа для развертывания (среда, в которой будет развёрнут сервис). Пример: `k8s-3.ext.nubes.ru`.<br/><br/>* **Количество узлов в сети:**<br/>  Количество реплик подов Gitea. Пример: `1`<br/><br/>* **Квота (megabyte) памяти пода:**<br/>  Квота памяти пода в мегабайтах. Пример: `1024`<br/><br/>* **Квота (millicore) ядра пода:**<br/>  Квота CPU пода в миликорах (1000 mCPU = 1 vCPU). Пример: `500`<br/><br/>* **Размер (gigabyte) диска для базы данных:**<br/>  Размер PVC для хранения репозиториев и данных Gitea в гигабайтах. Пример: `10`<br/><br/>* **FQDN / Домен:**<br/>  Доменное имя, по которому будет доступен сервис. Пример: `git.example.com`<br/><br/>* **Инстанс услуги PostgreSQL:**<br/>  UUID услуги k8sPgsql, в которой будет создана база данных `gitea` и пользователь `techgitea`.<br/><br/>* **Дополнительные параметры сервера (iniServerParams):**<br/>  JSON-объект с дополнительными параметрами секции `[server]` в `app.ini`. Пример:<br/>  ```json<br/>  {&quot;MAX_CONTENT_LENGTH&quot;: &quot;524288000&quot;}<br/>  ```<br/><br/>* **Дополнительные annotations для Ingress (ingressExtraAnnotations):**<br/>  JSON-объект с дополнительными annotations для Ingress-контроллера. Пример:<br/>  ```json<br/>  {&quot;nginx.ingress.kubernetes.io/proxy-body-size&quot;: &quot;500m&quot;}<br/>  ```<br/><br/>---<br/>## 3. Особенности подключения и работы с репозиториями<br/><br/>### 3.1. Доступ только по HTTPS<br/>Сервис развёртывается с **rootless-образом** Gitea. SSH-сервер внутри и он **доступен только внутри кластера Kubernetes**.<br/><br/>**Внешний доступ к репозиториям осуществляется исключительно по HTTPS через Ingress.**<br/><br/>```bash<br/># Пример клонирования<br/>https://&lt;домен&gt;/&lt;пользователь&gt;/&lt;репозиторий&gt;.git<br/>```<br/><br/>### 3.2. Настройка git для передачи логина и пароля<br/>Для работы с приватными репозиториями через HTTPS необходимо передать учётные данные. Рекомендуется использовать один из следующих способов:<br/><br/>**Встроить креды в URL remote**<br/>```bash<br/>git remote set-url origin https://&lt;логин&gt;:&lt;пароль&gt;@&lt;домен&gt;/&lt;пользователь&gt;/&lt;репозиторий&gt;.git<br/>```<br/>&gt; **Важно:** Логин и пароль администратора создаются автоматически при развертывании и хранятся в Vault.<br/><br/>### 3.3. Работа с большими файлами<br/>По умолчанию `MAX_CONTENT_LENGTH` установлен в **500 МБ**, а Ingress пропускает pack-файлы до **500 МБ**.<br/><br/>Если необходимо запушить файлы близкие к лимиту, увеличьте HTTP-буфер git на стороне клиента:<br/>```bash<br/>git config http.postBuffer 524288000<br/>```<br/><br/>Для файлов **более 500 МБ** рекомендуется использовать **Git LFS**.<br/><br/>---<br/>## 4. Выходные параметры<br/>После успешного развертывания ресурса Gitea платформа возвращает ряд параметров.<br/><br/>Ключевым из них является:<br/><br/>**connectionUrl**<br/>Это внешний URL для доступа к веб-интерфейсу и Git-репозиториям по HTTPS. Пример:<br/>```<br/>https://git.example.com<br/>```<br/><br/>**internalConnect**<br/>Внутренний эндпоинт для подключения к PostgreSQL из других сервисов внутри кластера.<br/><br/>---<br/>## 5. Дополнительная информация<br/>- База данных `gitea` и пользователь `techgitea` создаются автоматически в указанной услуге PostgreSQL.<br/>- DNS-запись и TLS-сертификат (Let''s Encrypt) настраиваются автоматически на основе указанного домена.<br/>- Для изменения параметров сервера Gitea (`app.ini`) используйте операцию **modify** с полем `iniServerParams`.<br/>- Для добавления дополнительных Ingress-annotations используйте операцию **modify** с полем `ingressExtraAnnotations`.<br/>---'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 82
+      kind: instance
+      action: create
+      params:
+        - id: 232
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: true
+          default: "500"
+          maxvalue: 4000
+          minvalue: 300
+          descr: Квота ядра пода (Указывается в mili). 1000Mili = 1 Ядро
+          man: Квота ядра пода (Указывается в mili). 1000Mili = 1 Ядро
+          sort: 40
+          is_modifiable: true
+        - id: 233
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: true
+          default: "512"
+          maxvalue: 8192
+          minvalue: 256
+          descr: Квота памяти пода (Указывается в Megabytes)
+          man: Квота памяти пода (Указывается в Megabytes)
+          sort: 50
+          is_modifiable: true
+        - id: 234
+          code: resourceDisk
+          data_type: integer &gt; 0
+          required: true
+          default: "1"
+          maxvalue: 999
+          minvalue: 1
+          descr: Квота диска (Указывается в GIGAbytes)
+          man: Квота диска (Указывается в GIGAbytes)
+          sort: 60
+          is_modifiable: true
+        - id: 235
+          code: resourceInstances
+          data_type: integer &gt; 0
+          required: true
+          default: "1"
+          maxvalue: 7
+          minvalue: 1
+          descr: Количество узлов
+          man: Количество узлов в сети
+          sort: 70
+          is_modifiable: true
+        - id: 237
+          code: domain
+          data_type: string
+          required: true
+          default: gitea-1
+          regex: ^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
+          unique_scope: provider
+          descr: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          man: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          sort: 20
+        - id: 238
+          code: psqlUid
+          data_type: uuid
+          required: true
+          ref_svc_id: 90
+          descr: UUID Услуги k8sPgsql. Пользователя techGitea, базу данных gitea создаёт автоматически
+          man: UUID Услуги k8sPgsql. Пользователя techGitea, базу данных gitea создаёт автоматически
+          sort: 10
+        - id: 818
+          code: ingressExtraAnnotations
+          data_type: map
+          required: false
+          is_modifiable: true
+        - id: 821
+          code: iniServerParams
+          data_type: map
+          required: false
+          is_modifiable: true
+    - name: delete
+      id: 83
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 91
+      kind: instance
+      action: modify
+      params:
+        - id: 259
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 4000
+          minvalue: 500
+          descr: Квота ядра пода (Указывается в mili). 1000Mili = 1 Ядро
+          sort: 10
+        - id: 260
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 8192
+          minvalue: 256
+          descr: Квота памяти пода (Указывается в Megabytes)
+          sort: 20
+        - id: 261
+          code: resourceDisk
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 999
+          minvalue: 1
+          descr: Квота диска (Указывается в GIGAbytes)
+          man: Квота диска (Указывается в GIGAbytes)
+          sort: 30
+        - id: 262
+          code: resourceInstances
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 7
+          minvalue: 1
+          descr: Количество узлов
+          man: Количество узлов в сети
+          sort: 40
+        - id: 819
+          code: ingressExtraAnnotations
+          data_type: map
+          required: false
+          man: 'Примеры:<br/> - `nginx.ingress.kubernetes.io/proxy-body-size: 500m` (Размер пакета)<br/> - `nginx.ingress.kubernetes.io/proxy-read-timeout: &quot;600&quot;` (Время ожидания при чтении)<br/> - `nginx.ingress.kubernetes.io/proxy-send-timeout: &quot;600&quot;` (Время ожидания отправке)'
+        - id: 820
+          code: iniServerParams
+          data_type: map
+          required: false
+          man: 'Примеры:<br/> - `MAX_CONTENT_LENGTH: 524288000(~500мб)` (Размер пакета в байтах)'
+    - name: resume
+      id: 127
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 126
+      kind: instance
+      action: suspend
+      params: []

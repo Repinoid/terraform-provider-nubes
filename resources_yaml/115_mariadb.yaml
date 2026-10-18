@@ -1,0 +1,430 @@
+name: mariadb
+service_id: 115
+service_display_name: Mariadb
+service_short_name: mariadb
+service_man: '# Инструкция по развертыванию MariaDB через платформу<br/><br/>## 1. Общая информация<br/><br/>MariaDB — реляционная база данных, совместимая с MySQL. Разворачивается через `mariadb-operator` в Kubernetes.<br/><br/>### Доступные операции с кластером<br/><br/>* **create**    — создание кластера<br/>* **delete**    — удаление кластера<br/>* **suspend**   — остановка кластера (под реально останавливается, ресурсы не потребляются)<br/>* **resume**    — запуск ранее остановленного кластера<br/>* **modify**    — изменение параметров кластера<br/>* **reconcile** — синхронизация состояния инстанса с платформой<br/><br/>### Доступные операции с базами данных<br/><br/>* **create_database** — создание базы данных<br/>* **delete_database** — удаление базы данных<br/><br/>### Доступные операции с пользователями<br/><br/>* **create_user** — создание пользователя<br/>* **delete_user** — удаление пользователя<br/><br/>---<br/><br/>## 2. Параметры создания кластера<br/><br/>### Платформа для развертывания (`startupConfiguration.resourceRealm`)<br/><br/>Среда, в которой будет развёрнут кластер.<br/><br/>### Конфигурация ресурсов (`clusterConfiguration`)<br/><br/>JSON-объект:<br/>* `cpu` — квота CPU пода в миликорах (1000 = 1 vCPU). Пример: `500`<br/>* `memory` — квота памяти пода в мегабайтах. Пример: `512`<br/>* `disk` — размер диска в гигабайтах. Пример: `10`<br/>* `replicas` — количество реплик. Сервис работает в режиме одного primary-узла (Galera выключена), значение `0` эквивалентно остановке кластера.<br/><br/>### Версия MariaDB (`mariadbConfiguration.version`)<br/><br/>Поддерживаются только две версии: `8.4.0` и `9.4.0`.<br/><br/>### Внешний доступ (`accessConfiguration`)<br/><br/>JSON-объект:<br/>* `masterIpSpace` — имя ipSpace для выделения внешнего IP. Укажите `no-needed`, если внешний адрес не требуется.<br/>* `masterAccessList` — список IP/подсетей, которым разрешён доступ к порту 3306 снаружи. Пустой список — доступ не ограничен на уровне firewall (в рамках выделенного ipSpace).<br/><br/>### Резервное копирование (`backupConfiguration`)<br/><br/>JSON-объект:<br/>* `s3Uid` — идентификатор S3-пользователя/квоты для бэкапов.<br/>* `schedule` — cron-выражение расписания бэкапов. По умолчанию `0 0 * * *` (раз в сутки в полночь).<br/>* `retain` — время хранения бэкапов **в часах** (не в днях!). По умолчанию `7` — то есть 7 часов. При суточном расписании этого значения обычно недостаточно, чтобы между двумя бэкапами всегда оставалась хотя бы одна валидная копия — рекомендуется указывать `retain` явно, с запасом (например `720` = 30 суток).<br/><br/>&gt; **Важно:** расписание и срок хранения бэкапов задаются **только при создании кластера**. Оператор MariaDB не позволяет изменить cron-расписание бэкапа после создания (поле `spec.schedule.cron` неизменяемо на уровне admission-вебхука самого оператора) — поэтому эти параметры недоступны для изменения через `modify`.<br/><br/>&gt; **Восстановление из бэкапа пока не реализовано как самостоятельная операция платформы.** Бэкапы физически хранятся в S3-бакете инстанса (`technicals3backup-&lt;instanceUid&gt;`, префикс `mariadb/backups/`). Если нужно восстановить данные из бэкапа — бэкап нужно **скачать из S3 и применить к базе вручную** (например через `mariabackup`/`mariadb-backup` restore или соответствующий инструмент).<br/><br/>### Автомасштабирование диска (`autoscaleConfiguration`)<br/><br/>JSON-объект:<br/>* `enabled` — включить автоматическое расширение диска при исчерпании места.<br/>* `quota` — максимальный размер диска, до которого разрешено автоматическое расширение (не может быть меньше `clusterConfiguration.disk`).<br/>* `percent`, `schedule` — параметры триггера автомасштабирования.<br/><br/>---<br/><br/>## 3. Параметры модификации кластера<br/><br/>Все параметры модификации, кроме версии, можно как увеличивать, так и уменьшать (кроме диска — см. ниже) — система подставит текущие сохранённые значения, если их не менять.<br/><br/>### Конфигурация ресурсов (`clusterConfiguration`)<br/><br/>* `cpu`, `memory` — можно менять в любую сторону.<br/>* `disk` — можно **только увеличивать**, уменьшение уже выделенного размера не поддерживается.<br/>* `replicas` — `0` останавливает кластер тем же образом, что и `suspend` (альтернативный способ временной остановки через `modify`).<br/><br/>### Версия MariaDB (`mariadbConfiguration.version`)<br/><br/>Можно только повышать версию (`8.4.0 → 9.4.0`). Попытка понизить версию будет отклонена с явной ошибкой ещё до применения изменений.<br/><br/>### Внешний доступ (`accessConfiguration`)<br/><br/>Можно включить внешний доступ (было `no-needed` → указали реальный `masterIpSpace`), изменить список разрешённых IP, либо полностью отключить внешний доступ (`masterIpSpace: no-needed`) — в этом случае внешний Service, DNS-запись и правило firewall будут корректно откреплены и удалены.<br/><br/>### Резервное копирование<br/><br/>Не передаётся при модификации — расписание и срок хранения бэкапов фиксируются на этапе `create` (см. п.2).<br/><br/>---<br/><br/>## 4. Параметры создания базы данных (`create_database`)<br/><br/>### Имя базы данных (`dbName`)<br/><br/>Строка с именем новой базы. Не может совпадать с зарезервированными системными именами: `mysql`, `sys`, `information_schema`, `performance_schema`. База с таким же именем не должна уже существовать в кластере.<br/><br/>---<br/><br/>## 5. Параметры удаления базы данных (`delete_database`)<br/><br/>### Имя базы данных (`dbName`)<br/><br/>База должна существовать в кластере. Удаление будет отклонено, если к базе всё ещё привязаны пользователи — сначала нужно снять доступ (`delete_user`) у всех пользователей, ссылающихся на эту базу.<br/><br/>---<br/><br/>## 6. Параметры создания пользователя (`create_user`)<br/><br/>### Имя пользователя (`username`)<br/><br/>Не может быть `root`, `healthcheck` или `mariadb.sys` — эти имена зарезервированы платформой/оператором.<br/><br/>### Пароль (`password`)<br/><br/>Пароль для подключения от имени создаваемого пользователя.<br/><br/>### Базы данных (`dbName`)<br/><br/>JSON-массив вида `[{&quot;dbname&quot;: &quot;имя_базы&quot;}]` — список баз, к которым выдаётся полный доступ (`ALL PRIVILEGES`). Все перечисленные базы должны уже существовать в кластере (создать заранее через `create_database`).<br/><br/>### Разрешённые хосты (`accessHosts`)<br/><br/>MySQL host-паттерн, с которого разрешено подключение под этим пользователем (например `%` — без ограничений, или конкретная подсеть). Определяет `user@host` в самой MariaDB — если указать слишком узкое значение, подключение снаружи ожидаемого диапазона будет отклонено сервером на уровне аутентификации, даже если сеть/firewall пропускают трафик.<br/><br/>---<br/><br/>## 7. Параметры удаления пользователя (`delete_user`)<br/><br/>### Имя пользователя (`username`)<br/><br/>Пользователь должен существовать в кластере. `root`/`healthcheck`/`mariadb.sys` удалить нельзя.<br/><br/>---<br/><br/>## 8. Выходные параметры<br/><br/>### internalConnect<br/><br/>Внутренний адрес для подключения из сервисов, работающих в том же кластере Kubernetes:<br/>```json<br/>{<br/>  &quot;master&quot;: {<br/>    &quot;dns&quot;: &quot;&lt;clusterResourceName&gt;.&lt;namespace&gt;.svc.&lt;domain&gt;&quot;,<br/>    &quot;ip&quot;: null,<br/>    &quot;port&quot;: 3306<br/>  }<br/>}<br/>```<br/><br/>### externalConnect<br/><br/>Присутствует в выходных данных, **только если** был запрошен внешний доступ (`accessConfiguration.masterIpSpace` отличен от `no-needed`). Если внешний доступ не запрошен или был отключён через `modify` — этого блока не будет вовсе (пустой блок в состояние не пишется):<br/>```json<br/>{<br/>  &quot;master&quot;: {<br/>    &quot;dns&quot;: &quot;write.&lt;namespace&gt;.&lt;domain&gt;&quot;,<br/>    &quot;ip&quot;: &quot;&lt;внешний IP&gt;&quot;,<br/>    &quot;port&quot;: 3306<br/>  }<br/>}<br/>```<br/><br/>---<br/><br/>## 9. Пример подключения<br/><br/>### 9.1 Изнутри кластера / того же namespace<br/><br/>```bash<br/>mariadb -h &lt;internalConnect.dns&gt; -P 3306 -u &lt;username&gt; -p<br/>```<br/><br/>### 9.2 Через port-forward<br/><br/>```bash<br/>kubectl port-forward svc/&lt;clusterResourceName&gt; 3306:3306 -n &lt;namespace&gt;<br/>```<br/><br/>**Важно:** после `port-forward` подключайтесь именно по `127.0.0.1`, а не `localhost`:<br/><br/>```bash<br/>mariadb -h 127.0.0.1 -P 3306 -u &lt;username&gt; -p<br/>```<br/><br/>Клиент `mysql`/`mariadb` при указании `-h localhost` **игнорирует TCP/порт** и всегда пытается подключиться через локальный unix-сокет (`/var/lib/mysql/mysql.sock`), которого на вашей машине нет — подключение упадёт с `ERROR 2002 (HY000): Can''t connect to local server through socket`. `127.0.0.1` форсирует реальное TCP-подключение. Также не забывайте `-P` (порт) с заглавной буквы — строчная `-p` относится к паролю.<br/><br/>### 9.3 Снаружи (внешний адрес)<br/><br/>```bash<br/>mariadb -h &lt;externalConnect.ip или externalConnect.dns&gt; -P 3306 -u &lt;username&gt; -p<br/>```<br/><br/>Доступно только если при создании/модификации был указан реальный `masterIpSpace` и подключающийся IP входит в `accessConfiguration.masterAccessList` (или список пуст).<br/><br/>Где:<br/>* `&lt;username&gt;` — имя пользователя<br/>* `&lt;password&gt;` — пароль пользователя<br/><br/>---<br/><br/>## 10. Дополнительная информация<br/><br/>* Расписание бэкапов (`backupConfiguration.schedule`/`retain`) задаётся один раз при создании и не может быть изменено позже — ограничение самого `mariadb-operator`, а не платформы.<br/>* Версию MariaDB можно только повышать, откат на более старую версию не поддерживается.<br/>* Размер диска можно только увеличивать.<br/>* `suspend` реально останавливает под (масштабирование StatefulSet в 0 реплик), а не просто помечает кластер как приостановленный — расход ресурсов CPU/RAM/диска (кроме уже занятого диска) прекращается.<br/>* При отключении внешнего доступа через `modify` (`masterIpSpace: no-needed`) внешний Service, DNS-запись и правило firewall удаляются, а `externalConnect` пропадает из выходных данных.<br/>* Самостоятельного восстановления из бэкапа (операции `restore`) пока нет. Бэкапы лежат в S3 инстанса — восстановление данных в существующий кластер выполняется вручную, скачиванием и применением бэкапа самим владельцем инстанса.'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 138
+      kind: instance
+      action: create
+      params:
+        - id: 877
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 242
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: k8s-4-ext-nubes-ru
+              value_list:
+                - k8s-4-ext-nubes-ru
+              man: Кластер Kubernetes, на котором будет развернут экземпляр
+              is_modifiable: false
+        - id: 878
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          is_modifiable: true
+          sub_params:
+            - id: 243
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "500"
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 244
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "512"
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 245
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              value_list:
+                - "1"
+              man: Пока `Galera` выключена<br/>Как будет запрос на включение и тестирование, реплики можно будет увеличивать
+              is_modifiable: false
+            - id: 246
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: "10"
+              man: Указывается в GIGAbytes
+              is_modifiable: false
+        - id: 879
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          is_modifiable: true
+          sub_params:
+            - id: 247
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 248
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+        - id: 880
+          code: mariadbConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 40
+          is_modifiable: true
+          sub_params:
+            - id: 249
+              code: version
+              data_type: string
+              required: true
+              default: 9.4.0
+              value_list:
+                - 8.4.0
+                - 9.4.0
+              is_modifiable: false
+        - id: 881
+          code: backupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 60
+          sub_params:
+            - id: 250
+              code: s3Uid
+              data_type: uuid
+              required: true
+              default: ""
+              man: Экземпляр S3 обязателен
+              is_modifiable: false
+            - id: 251
+              code: retain
+              data_type: integer &gt; 0
+              required: true
+              default: "720"
+              is_modifiable: false
+            - id: 252
+              code: schedule
+              data_type: string
+              required: true
+              default: 0 0 * * *
+              regex: ^((((\d+,)+\d+|(\d+(\/|-|#)\d+)|(\d+L?)|(\*(\/\d+)?)|(L(-\d+)?)|(\?)|([A-Z]{3}(-[A-Z]{3})?)) ?){5,7})|(@(annually|yearly|monthly|weekly|daily|hourly|reboot))|(@every (\d+(ns|us|µs|ms|s|m|h))+)$
+              is_modifiable: false
+        - id: 882
+          code: autoscaleConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 70
+          is_modifiable: true
+          sub_params:
+            - id: 253
+              code: enabled
+              data_type: boolean
+              required: true
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              man: Включает автоскейлинг PV. При включении параметра необходимо настроить autoScalePercentage и autoScaleTechWindow. Алерт при срабатывании вызывает modify у текущей услуги
+              is_modifiable: false
+            - id: 254
+              code: schedule
+              data_type: integer &gt;= 0
+              required: true
+              default: "0"
+              value_list:
+                - "0"
+                - "5"
+                - "12"
+                - "23"
+              man: Требует включения autoScale. Окно обновления (пока не реализовано). Указывается час в виде Integer (0 / 5 / 12 / 23)
+              is_modifiable: false
+            - id: 255
+              code: quota
+              data_type: integer &gt; 0
+              required: true
+              default: "100"
+              man: До какого размера возможно увеличивать диск, когда включен Autoscale
+              is_modifiable: false
+            - id: 256
+              code: percent
+              data_type: integer &gt; 0
+              required: true
+              default: "10"
+              value_list:
+                - "10"
+                - "15"
+                - "20"
+              man: Требует включения autoScale. Позволяет указать в процентах расширение от текущего макс объема<br/>Минимальный размер на который расширяется - **1Gb**
+              is_modifiable: false
+    - name: create_database
+      id: 242
+      kind: subresource
+      action: create
+      subresource: database
+      params:
+        - id: 734
+          code: dbName
+          data_type: string
+          required: true
+          default: db-ytgwkbrt
+          regex: ^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$
+          descr: 'Пример: `db01`'
+    - name: create_user
+      id: 243
+      kind: subresource
+      action: create
+      subresource: user
+      params:
+        - id: 735
+          code: username
+          data_type: string
+          required: true
+          default: user1x6poxgd
+          regex: ^(?![0-9_])[a-zA-Z_][a-zA-Z0-9_]{0,62}$
+          maxlength: 62
+          minlength: 2
+          descr: 'Пример: `myusername`'
+          sort: 10
+        - id: 736
+          code: password
+          data_type: string
+          required: true
+          default: obdfw0pp
+          maxlength: 62
+          minlength: 8
+          descr: Секрет будет записан в хранилище секретов и не будет отображаться публично
+          sort: 20
+          is_sensitive: true
+        - id: 737
+          code: dbName
+          data_type: array-map-fixed
+          required: true
+          default: '[{}]'
+          descr: Необходимо указать массив существующих баз
+          man: Если базы не существует - при выполнении операции вернётся ошибка
+          sort: 30
+          sub_params:
+            - id: 54
+              code: dbname
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+        - id: 738
+          code: accessHosts
+          data_type: string
+          required: true
+          default: '%'
+          descr: 'Пример: `%`'
+          sort: 40
+    - name: delete
+      id: 139
+      kind: instance
+      action: delete
+      params:
+        - id: 456
+          code: deleteS3Bucket
+          data_type: boolean
+          required: true
+          default: "true"
+          value_list:
+            - "false"
+            - "true"
+          descr: Также удалить технический S3 Bucket с бэкапами?
+          sort: 10
+    - name: delete_database
+      id: 248
+      kind: subresource
+      action: delete
+      subresource: database
+      params:
+        - id: 745
+          code: dbName
+          data_type: string
+          required: true
+          descr: ВСЕ ДАННЫЕ ВНУТРИ БД БУДУТ УДАЛЕНЫ
+    - name: delete_user
+      id: 247
+      kind: subresource
+      action: delete
+      subresource: user
+      params:
+        - id: 744
+          code: username
+          data_type: string
+          required: true
+          descr: Имя пользователя, созданное через операцию `create_user`
+    - name: modify
+      id: 142
+      kind: instance
+      action: modify
+      params:
+        - id: 883
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 257
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 258
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 259
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1"
+              man: Пока `Galera` выключена<br/>Как будет запрос на включение и тестирование, реплики можно будет увеличивать
+              is_modifiable: false
+            - id: 260
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в GIGAbytes
+              is_modifiable: false
+        - id: 884
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 261
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              man: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 262
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: ""
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+        - id: 885
+          code: mariadbConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          sub_params:
+            - id: 263
+              code: version
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - 8.4.0
+                - 9.4.0
+              is_modifiable: false
+        - id: 887
+          code: autoscaleConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 50
+          sub_params:
+            - id: 267
+              code: enabled
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "false"
+                - "true"
+              man: Включает автоскейлинг PV. При включении параметра необходимо настроить autoScalePercentage и autoScaleTechWindow. Алерт при срабатывании вызывает modify у текущей услуги
+              is_modifiable: false
+            - id: 268
+              code: schedule
+              data_type: integer &gt;= 0
+              required: true
+              default: ""
+              value_list:
+                - "0"
+                - "5"
+                - "12"
+                - "23"
+              man: Требует включения autoScale. Окно обновления (пока не реализовано). Указывается час в виде Integer (0 / 5 / 12 / 23)
+              is_modifiable: false
+            - id: 269
+              code: quota
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: До какого размера возможно увеличивать диск, когда включен Autoscale
+              is_modifiable: false
+            - id: 270
+              code: percent
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "10"
+                - "15"
+                - "20"
+              man: Требует включения autoScale. Позволяет указать в процентах расширение от текущего макс объема<br/>Минимальный размер на который расширяется - **1Gb**
+              is_modifiable: false
+    - name: reconcile
+      id: 287
+      kind: action
+      action: reconcile
+      params: []
+    - name: resume
+      id: 141
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 140
+      kind: instance
+      action: suspend
+      params: []

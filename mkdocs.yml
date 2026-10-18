@@ -1,0 +1,152 @@
+site_name: Terraform Provider Nubes
+site_url: https://repinoid.github.io/terraform-provider-nubes/
+docs_dir: website/docs
+site_dir: site
+theme:
+  name: material
+  features:
+    - navigation.sections
+    - navigation.top
+markdown_extensions:
+  - toc:
+      permalink: true
+  - tables
+nav:
+  - Home: index.md
+  - Guides:
+    - Provider behavior: guides/provider-behavior.md
+    - Terraform basics: guides/terraform-basics.md
+    - Terraform structure: guides/terraform-structure.md
+    - Glossary: guides/glossary.md
+  - Service manuals:
+    - Болванка: guides/services/dummy.md
+    - S3 Object Storage: guides/services/s3.md
+    - Организация в Cloud Director: guides/services/vc_org.md
+    - Виртуальный датацентр (vDC): guides/services/vc_vdc.md
+    - Сетевой шлюз периметра (Edge): guides/services/vc_nsxt.md
+    - Публичные IP адреса: guides/services/vcexternalip.md
+    - Виртуальный каталог ВМ (vApp): guides/services/vapp.md
+    - Виртуальная машина: guides/services/vc_vm_v3.md
+    - Группа датацентров: guides/services/vc_vdc_group.md
+    - Nextcloud: guides/services/nextcloud.md
+    - Apache Superset: guides/services/superset.md
+    - Container Registry: guides/services/harbor.md
+    - Web-сервер с фреймворком Flask: guides/services/flask.md
+    - PostgreSQL: guides/services/postgres.md
+    - Redis: guides/services/redis.md
+    - MongoDB: guides/services/mongodb.md
+    - RabbitMQ: guides/services/rabbitmq.md
+    - NodeJS: guides/services/nodejs.md
+    - pgAdmin: guides/services/pgadmin.md
+    - Gitea: guides/services/gitea.md
+    - Управление DNS: guides/services/zones_v2.md
+    - DNS запись: guides/services/dnsrecord.md
+    - Mariadb: guides/services/mariadb.md
+    - ApacheKafka: guides/services/kafka.md
+    - Akhq: guides/services/akhq.md
+    - ClickHouse: guides/services/clickhouse.md
+    - VALO Cloud: guides/services/valo_tenant.md
+    - Kubernetes кластер Штурвал: guides/services/k8s_sthutrval_cluster.md
+    - Vault: guides/services/k8s_openbao.md
+    - ML Улей: guides/services/llm_ai.md
+  - Service guides:
+    - Болванка: resources/dummy.md
+    - Темплейт k8s: resources/template.md
+    - S3 Object Storage: resources/s3.md
+    - S3 бакет: resources/s3bucket.md
+    - Организация в Cloud Director: resources/vc_org.md
+    - Виртуальный датацентр (vDC): resources/vc_vdc.md
+    - Сетевой шлюз периметра (Edge): resources/vc_nsxt.md
+    - Публичные IP адреса: resources/vcexternalip.md
+    - Виртуальный каталог ВМ (vApp): resources/vapp.md
+    - Виртуальная машина: resources/vc_vm_v3.md
+    - Группа датацентров: resources/vc_vdc_group.md
+    - Nextcloud: resources/nextcloud.md
+    - Apache Superset: resources/superset.md
+    - Container Registry: resources/harbor.md
+    - Velero: resources/k8s_velero.md
+    - Web-сервер с фреймворком Flask: resources/flask.md
+    - PostgreSQL: resources/postgres.md
+    - Redis: resources/redis.md
+    - MongoDB: resources/mongodb.md
+    - RabbitMQ: resources/rabbitmq.md
+    - Lucee: resources/lucee.md
+    - NodeJS: resources/nodejs.md
+    - pgAdmin: resources/pgadmin.md
+    - Простой HTTP контейнер: resources/http.md
+    - Gitea: resources/gitea.md
+    - Управление DNS: resources/zones_v2.md
+    - DNS запись: resources/dnsrecord.md
+    - Mariadb: resources/mariadb.md
+    - ApacheKafka: resources/kafka.md
+    - Akhq: resources/akhq.md
+    - ClickHouse: resources/clickhouse.md
+    - VALO Cloud: resources/valo_tenant.md
+    - Kubernetes кластер Штурвал: resources/k8s_sthutrval_cluster.md
+    - Vault: resources/k8s_openbao.md
+    - ML Улей: resources/llm_ai.md
+  - Schema reference:
+    - Overview: reference/index.md
+    - Machine-readable schema: provider-schema.json
+    - nubes_akhq: reference/resources/akhq.md
+    - nubes_clickhouse: reference/resources/clickhouse.md
+    - nubes_clickhouse_database: reference/resources/clickhouse_database.md
+    - nubes_clickhouse_user: reference/resources/clickhouse_user.md
+    - nubes_dnsrecord: reference/resources/dnsrecord.md
+    - nubes_dummy: reference/resources/dummy.md
+    - nubes_flask: reference/resources/flask.md
+    - nubes_gitea: reference/resources/gitea.md
+    - nubes_harbor: reference/resources/harbor.md
+    - nubes_http: reference/resources/http.md
+    - nubes_k8s_openbao: reference/resources/k8s_openbao.md
+    - nubes_k8s_openbao_kv: reference/resources/k8s_openbao_kv.md
+    - nubes_k8s_openbao_policy: reference/resources/k8s_openbao_policy.md
+    - nubes_k8s_openbao_secrets: reference/resources/k8s_openbao_secrets.md
+    - nubes_k8s_sthutrval_cluster: reference/resources/k8s_sthutrval_cluster.md
+    - nubes_k8s_sthutrval_cluster_user: reference/resources/k8s_sthutrval_cluster_user.md
+    - nubes_k8s_velero: reference/resources/k8s_velero.md
+    - nubes_kafka: reference/resources/kafka.md
+    - nubes_kafka_topic: reference/resources/kafka_topic.md
+    - nubes_kafka_user: reference/resources/kafka_user.md
+    - nubes_llm_ai: reference/resources/llm_ai.md
+    - nubes_llm_ai_secrets: reference/resources/llm_ai_secrets.md
+    - nubes_llm_ai_team: reference/resources/llm_ai_team.md
+    - nubes_lucee: reference/resources/lucee.md
+    - nubes_mariadb: reference/resources/mariadb.md
+    - nubes_mariadb_database: reference/resources/mariadb_database.md
+    - nubes_mariadb_user: reference/resources/mariadb_user.md
+    - nubes_mongodb: reference/resources/mongodb.md
+    - nubes_mongodb_backup: reference/resources/mongodb_backup.md
+    - nubes_mongodb_rollback: reference/resources/mongodb_rollback.md
+    - nubes_mongodb_user: reference/resources/mongodb_user.md
+    - nubes_nextcloud: reference/resources/nextcloud.md
+    - nubes_nextcloud_backup: reference/resources/nextcloud_backup.md
+    - nubes_nodejs: reference/resources/nodejs.md
+    - nubes_pgadmin: reference/resources/pgadmin.md
+    - nubes_postgres: reference/resources/postgres.md
+    - nubes_postgres_backup: reference/resources/postgres_backup.md
+    - nubes_postgres_database: reference/resources/postgres_database.md
+    - nubes_postgres_user: reference/resources/postgres_user.md
+    - nubes_rabbitmq: reference/resources/rabbitmq.md
+    - nubes_redis: reference/resources/redis.md
+    - nubes_s3: reference/resources/s3.md
+    - nubes_s3_sub_user: reference/resources/s3_sub_user.md
+    - nubes_s3bucket: reference/resources/s3bucket.md
+    - nubes_service_operation: reference/resources/service_operation.md
+    - nubes_superset: reference/resources/superset.md
+    - nubes_template: reference/resources/template.md
+    - nubes_valo_tenant: reference/resources/valo_tenant.md
+    - nubes_vapp: reference/resources/vapp.md
+    - nubes_vc_mgmt_sthutrval_cluster: reference/resources/vc_mgmt_sthutrval_cluster.md
+    - nubes_vc_nsxt: reference/resources/vc_nsxt.md
+    - nubes_vc_nsxt_snat: reference/resources/vc_nsxt_snat.md
+    - nubes_vc_org: reference/resources/vc_org.md
+    - nubes_vc_org_ip_allocation: reference/resources/vc_org_ip_allocation.md
+    - nubes_vc_org_user: reference/resources/vc_org_user.md
+    - nubes_vc_vdc: reference/resources/vc_vdc.md
+    - nubes_vc_vdc_group: reference/resources/vc_vdc_group.md
+    - nubes_vc_vdc_group_vdc: reference/resources/vc_vdc_group_vdc.md
+    - nubes_vc_vm_v3: reference/resources/vc_vm_v3.md
+    - nubes_vcexternalip: reference/resources/vcexternalip.md
+    - nubes_zones_v2: reference/resources/zones_v2.md
+    - nubes_zones_v2_record: reference/resources/zones_v2_record.md

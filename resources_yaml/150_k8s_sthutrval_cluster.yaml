@@ -1,0 +1,506 @@
+name: k8s_sthutrval_cluster
+service_id: 150
+service_display_name: Kubernetes кластер Штурвал
+service_short_name: k8sSthutrvalCluster
+service_man: '# Развёртывание Kubernetes: ограничения и предварительный чек-лист<br/><br/>&gt; **Внимание:** перед началом развёртывания кластера Kubernetes убедитесь, что выполнены все описанные ниже условия. Несоблюдение порядка шагов может привести к ошибкам при создании кластера.<br/><br/>---<br/><br/>## Ограничения при развёртывании<br/><br/>| Ограничение | Статус |<br/>|---|---|<br/>| 1 кластер = 1 vDC | Действует (будет исправлено в ближайшее время) |<br/><br/>---<br/><br/>## Предварительный чек-лист<br/><br/>Перед установкой кластера Kubernetes необходимо последовательно выполнить следующие шаги.<br/><br/>### 1. Создать организацию в Cloud Director<br/><br/>- Перейдите в услугу **Организация в Cloud Director**.<br/>- Создайте организацию.<br/><br/>### 2. Создать виртуальный датацентр (vDC)<br/><br/>- Перейдите в услугу **Виртуальный датацентр (vDC)**.<br/>- Создайте vDC.<br/>- Выделите **достаточно ресурсов для разворачивания _всех_ нод** кластера.<br/><br/>### 3. Создать Edge (сетевой шлюз периметра)<br/><br/>- Перейдите в услугу **Сетевой шлюз периметра (Edge)**.<br/>- Создайте Edge.<br/>- Обязательно:<br/>  - Включить **ALB**.<br/>  - Установить **Кол-во VS на AVI ≥ 3**.<br/><br/>### 4. Добавить внешние адреса в организации<br/><br/>- Вернитесь в **Организация в Cloud Director**.<br/>- Выполните операцию **Modify**.<br/>- Добавьте **3 внешних адреса**.<br/>- Количество `ipSpaces` значения не имеет, важно чтобы суммарно было 3 адреса.<br/><br/>### 5. Настроить SNAT для виртуальных машин<br/><br/>- Вернитесь в **Сетевой шлюз периметра (Edge)**.<br/>- Выполните операцию **Modify**.<br/>- Выберите доступный `ipSpaceName`.<br/>- Это будет **SNAT для виртуальных машин**.<br/><br/>### 6. Развернуть кластер Kubernetes<br/><br/>- Только **после выполнения всех шагов выше** переходите к услуге **Kubernetes кластер Штурвал**.<br/>- Начните разворачивание кластера.<br/><br/>---<br/><br/>## Минимальные требования к кластеру<br/><br/>| Параметр | Значение |<br/>|---|---|<br/>| Мастер-ноды | минимум **1** |<br/>| Воркер-ноды | минимум **1** |<br/>| CPU (на ноду) | **4 vCPU** |<br/>| RAM (на ноду) | **8 GB** |<br/>| Диск (на ноду) | **50 GB** |<br/><br/>---'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 108
+      kind: instance
+      action: create
+      params:
+        - id: 750
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 57
+              code: vdcUid
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 58
+              code: nsxtUid
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 59
+              code: clusterName
+              data_type: string
+              required: true
+              default: example-cgxgj77j
+              regex: (?=^.{1,63}$)^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
+              is_modifiable: false
+            - id: 660
+              code: exLogging
+              data_type: boolean
+              required: false
+              default: "true"
+              value_list:
+                - "true"
+                - "false"
+              man: А также перенаправление логов в Loki<br/>Без этого логи сервисов в ЛК отображаться не будут
+              is_modifiable: false
+            - id: 661
+              code: exMonitoring
+              data_type: boolean
+              required: false
+              default: "true"
+              value_list:
+                - "true"
+                - "false"
+              man: А также перенаправление логов в VictoriaMetrics<br/>Без этого метрики сервисов в ЛК отображаться не будут
+              is_modifiable: false
+            - id: 663
+              code: exLocalCsi
+              data_type: boolean
+              required: false
+              default: "true"
+              value_list:
+                - "true"
+                - "false"
+              is_modifiable: false
+            - id: 664
+              code: exVip
+              data_type: boolean
+              required: false
+              default: "true"
+              value_list:
+                - "true"
+                - "false"
+              is_modifiable: false
+            - id: 665
+              code: exUpdate
+              data_type: boolean
+              required: false
+              default: "true"
+              value_list:
+                - "true"
+                - "false"
+              is_modifiable: false
+            - id: 666
+              code: exIngress
+              data_type: boolean
+              required: false
+              default: "true"
+              value_list:
+                - "true"
+                - "false"
+              is_modifiable: false
+            - id: 667
+              code: exNamedCsi
+              data_type: boolean
+              required: false
+              default: "true"
+              value_list:
+                - "true"
+                - "false"
+              is_modifiable: false
+        - id: 751
+          code: controlPlaneConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          is_modifiable: true
+          sub_params:
+            - id: 61
+              code: sizingPolicy
+              data_type: string
+              required: true
+              default: '[]'
+              value_list:
+                - '{}'
+              man: Доступные sizing Policy можно обновлять через услугу `Виртуальный датацентр`
+              is_modifiable: false
+            - id: 62
+              code: sizingDisk
+              data_type: integer &gt; 0
+              required: true
+              default: "50"
+              man: Дисковая политика берётся из услуги VDC, первый в списке
+              is_modifiable: false
+            - id: 63
+              code: count
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+              is_modifiable: false
+        - id: 752
+          code: workerConfiguration
+          data_type: array-map-fixed
+          required: true
+          default: '[{}]'
+          sort: 40
+          is_modifiable: true
+          sub_params:
+            - id: 64
+              code: groupName
+              data_type: string
+              required: true
+              default: workers-lh6v9rjb
+              regex: (?=^.{3,40}$)^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
+              man: Имена групп воркеров в рамках кластера должно быть уникальным
+              is_modifiable: false
+            - id: 65
+              code: sizingPolicy
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - '{}'
+              man: Доступные sizing Policy можно обновлять через услугу `Виртуальный датацентр`
+              is_modifiable: false
+            - id: 66
+              code: sizingDisk
+              data_type: integer &gt; 0
+              required: true
+              default: "50"
+              man: Дисковая политика берётся из услуги VDC, первый в списке
+              is_modifiable: false
+            - id: 67
+              code: count
+              data_type: integer &gt; 0
+              required: true
+              default: "2"
+              is_modifiable: false
+            - id: 656
+              code: autoscale
+              data_type: boolean
+              required: false
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              man: Включает автоматическое масштабирование нод<br/>Имеет приоритет над параметром **Кол-во узлов Workers**, если включен
+              is_modifiable: false
+            - id: 657
+              code: autoscaleMin
+              data_type: integer &gt; 0
+              required: false
+              default: "2"
+              man: Параметр к **Autoscale**<br/><br/>**Автоскейл с 0** пока не доступен - ограничение cluster API
+              is_modifiable: false
+            - id: 658
+              code: autoscaleMax
+              data_type: integer &gt; 0
+              required: false
+              default: "3"
+              man: Параметр к **Autoscale**<br/><br/>Нельзя указать меньше чем **Минимальное кол-во нод**
+              is_modifiable: false
+            - id: 659
+              code: labelDeck
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "true"
+                - "false"
+              man: Позволяет на данной группе узлов разворачивать услуги из Личного кабинета<br/>Необходимо выключить если планируется, что на части узлов будет настроен к примеру только Ingress
+              is_modifiable: false
+        - id: 753
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 50
+          is_modifiable: true
+          sub_params:
+            - id: 68
+              code: needExternalAddressAPI
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "true"
+              man: Выделяет внешний IP для доступа к kubernetes API. Пока нельзя выставить false
+              is_modifiable: false
+            - id: 69
+              code: accessIpListAPI
+              data_type: json
+              required: true
+              default: '[]'
+              man: Access IP List для подключения к Kubernetes API. Указывается массив. Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+            - id: 70
+              code: needExternalAddressIngress
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "true"
+              man: Выделяет внешний IP для доступа к Ingress
+              is_modifiable: false
+            - id: 71
+              code: accessIpListIngress
+              data_type: json
+              required: true
+              default: '[]'
+              man: Access IP List для подключения к Ingress. Указывается массив. Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+        - id: 755
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          is_modifiable: true
+          sub_params:
+            - id: 72
+              code: appVersion
+              data_type: string
+              required: true
+              default: 2.14.0
+              value_list:
+                - 2.14.0
+                - 2.13.1
+                - 2.12.1
+                - 2.11.0
+              is_modifiable: false
+    - name: create_user
+      id: 281
+      kind: subresource
+      action: create
+      subresource: user
+      params:
+        - id: 869
+          code: admins
+          data_type: array-map-fixed
+          required: true
+          default: '[{}]'
+          sort: 10
+          sub_params:
+            - id: 236
+              code: email
+              data_type: string
+              required: true
+              default: ""
+              man: Пользователи будут добавлены, только если они зарегистрированы в личном кабинете
+              is_modifiable: false
+    - name: delete
+      id: 109
+      kind: instance
+      action: delete
+      params: []
+    - name: delete_user
+      id: 282
+      kind: subresource
+      action: delete
+      subresource: user
+      params:
+        - id: 870
+          code: admins
+          data_type: array-map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 237
+              code: email
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+    - name: modify
+      id: 110
+      kind: instance
+      action: modify
+      man: При изменении кол-ва узлов, удаления группы, если в этой группе есть поды на которых есть PV с named-дисками, удаляться ноды сами НЕ БУДУТ. <br/>Убедитесь, что они будут смигрированы на другие ноды в процессе прежде чем группа узлов/узлы будут удалены
+      params:
+        - id: 756
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 73
+              code: appVersion
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - 2.14.0
+                - 2.13.1
+                - 2.12.1
+                - 2.11.0
+              is_modifiable: false
+        - id: 757
+          code: controlPlaneConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 74
+              code: sizingPolicy
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - '{}'
+              man: Доступные sizing Policy можно обновлять через услугу `Виртуальный датацентр`
+              is_modifiable: false
+            - id: 75
+              code: sizingDisk
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Дисковая политика берётся из услуги VDC, первый в списке
+              is_modifiable: false
+            - id: 76
+              code: count
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+              is_modifiable: false
+        - id: 758
+          code: workerConfiguration
+          data_type: array-map-fixed
+          required: true
+          sort: 30
+          sub_params:
+            - id: 77
+              code: groupName
+              data_type: string
+              required: true
+              default: workers-p9loahjo
+              regex: (?=^.{3,40}$)^[a-z0-9]([a-z0-9-]*[a-z0-9])?$
+              man: Имена групп воркеров в рамках кластера должно быть уникальным
+              is_modifiable: false
+            - id: 78
+              code: sizingPolicy
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - '{}'
+              man: Доступные sizing Policy можно обновлять через услугу `Виртуальный датацентр`
+              is_modifiable: false
+            - id: 79
+              code: sizingDisk
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Дисковая политика берётся из услуги VDC, первый в списке
+              is_modifiable: false
+            - id: 80
+              code: count
+              data_type: integer &gt;= 0
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 671
+              code: autoscale
+              data_type: boolean
+              required: false
+              default: ""
+              value_list:
+                - "false"
+                - "true"
+              man: Включает автоматическое масштабирование нод<br/>Имеет приоритет над параметром **Кол-во узлов Workers**, если включен
+              is_modifiable: false
+            - id: 672
+              code: autoscaleMin
+              data_type: integer &gt; 0
+              required: false
+              default: ""
+              man: Параметр к **Autoscale**<br/><br/>**Автоскейл с 0** пока не доступен - ограничение cluster API
+              is_modifiable: false
+            - id: 673
+              code: autoscaleMax
+              data_type: integer &gt; 0
+              required: false
+              default: ""
+              man: Параметр к **Autoscale**<br/><br/>Нельзя указать меньше чем **Минимальное кол-во нод**
+              is_modifiable: false
+            - id: 674
+              code: labelDeck
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "true"
+                - "false"
+              man: Позволяет на данной группе узлов разворачивать услуги из Личного кабинета<br/>Необходимо выключить если планируется, что на части узлов будет настроен к примеру только Ingress
+              is_modifiable: false
+        - id: 759
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 40
+          sub_params:
+            - id: 81
+              code: needExternalAddressAPI
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "true"
+              man: Выделяет внешний IP для доступа к kubernetes API. Пока нельзя выставить false
+              is_modifiable: false
+            - id: 82
+              code: accessIpListAPI
+              data_type: json
+              required: true
+              default: '[]'
+              man: Access IP List для подключения к Kubernetes API. Указывается массив. Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+            - id: 83
+              code: needExternalAddressIngress
+              data_type: boolean
+              required: true
+              default: "true"
+              value_list:
+                - "true"
+              man: Выделяет внешний IP для доступа к Ingress
+              is_modifiable: false
+            - id: 84
+              code: accessIpListIngress
+              data_type: json
+              required: true
+              default: '[]'
+              man: Access IP List для подключения к Ingress. Указывается массив. Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+    - name: reconcile
+      id: 253
+      kind: action
+      action: reconcile
+      params: []
+    - name: resume
+      id: 174
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 173
+      kind: instance
+      action: suspend
+      params: []

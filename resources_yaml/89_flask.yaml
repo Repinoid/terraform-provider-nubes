@@ -1,0 +1,238 @@
+name: flask
+service_id: 89
+service_display_name: Web-сервер с фреймворком Flask
+service_short_name: flask
+service_man: '# Инструкция по развертыванию Web-сервер с фреймворком Flask через платформу<br/><br/>## 1. Общая информация<br/><br/>Сервис **Web-сервер с фреймворком Flask** предназначен для развертывания веб-приложений на базе Flask.<br/><br/>### Доступные операции<br/><br/>create — включить сервис, развернуть веб-приложение с указанными параметрами.<br/>delete — удалить сервис, только после suspend.<br/>modify — изменить настройки сервиса и переразвернуть.<br/>suspend — выключить веб-приложение, остановить обслуживание.<br/>resume — включить веб-приложение после suspend.<br/><br/>---<br/><br/>## 2. Параметры развертывания<br/><br/>Параметры входных данных операции **create**:<br/><br/>### Имя домена<br/>Описание: доменное имя для доступа к веб-приложению. Если указан FQDN, происходит проверка DNS на валидность А-записи. А-запись должна указывать на балансировщик ресурсной платформы. Если указано имя в рамках одного октета, оно будет добавлено в публичную DNS-зону.<br/>Пример значения: строка, допустимые FQDN или имя в одном октете. Пример: example.com или myapp.<br/><br/>### Платформа для развертывания<br/>Описание: кластер Kubernetes, в котором будет развернуто приложение.<br/>Пример значения: идентификатор кластера Kubernetes.<br/><br/>### Квота ядра пода<br/>Описание: количество CPU, выделяемое на под, в Milicores.<br/>Пример значения: целое число, например 500 для 0.5 ядра.<br/><br/>### Квота памяти пода<br/>Описание: количество памяти, выделяемое на под, в Megabytes.<br/>Пример значения: целое число, например 512 для 512 MB.<br/><br/>### Кол-во реплик пода<br/>Описание: количество инстансов пода для масштабирования.<br/>Пример значения: целое число, шт, например 2.<br/><br/>### URL Проекта (gitpath)<br/>Описание: полный HTTPS путь до проекта в Git-репозитории.<br/>Пример значения: URL в формате https://github.com/myuser/myproject.git. Доступ к репозиторию должен быть публичным.<br/><br/>### URL HealthCheck<br/>Описание: путь для проверки здоровья приложения внутри пода.<br/>Пример значения: строка, путь, например /api/v1/health.<br/><br/>### Переменные окружения пода<br/>Описание: структура данных, которая будет передана как переменные окружения в под.<br/>Пример значения: ключ-значение, например {&quot;ENV&quot;: &quot;production&quot;}.<br/><br/>---<br/><br/>## 3. Рекомендованные характеристики<br/><br/>### Тестовое окружение<br/>- Квота ядра пода: 300m (0.3 ядра)<br/>- Квота памяти пода: 256 MB<br/>- Кол-во реплик пода: 1<br/><br/>### Промышленное окружение<br/>- Квота ядра пода: от 1000m (1 ядро) в зависимости от нагрузки<br/>- Квота памяти пода: от 1024 MB (1 GB) с учетом потребностей приложения<br/>- Кол-во реплик пода: от 2 для обеспечения отказоустойчивости<br/><br/>---<br/><br/>## 4. Выходные параметры<br/>Операция create не возвращает явных выходных параметров. Успешное выполнение операции приводит к развертыванию сервиса, доступного по указанному домену.<br/><br/>---<br/><br/>## 5. Дополнительная информация<br/>- В корне проекта должен находиться файл requirements.txt со списком зависимостей Python.<br/>- Исходный код веб-приложения должен располагаться в директории site.<br/>- Запуск веб-сервера осуществляется командой python app.py.<br/>- Используется версия Python: python:3.12-slim.<br/>- Git-репозиторий должен быть публично доступен для платформы.<br/>- Операция delete возможна только после suspend.<br/>- Операция modify приводит к переразвертыванию с новыми параметрами.'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 376
+      kind: instance
+      action: create
+      params:
+        - id: 1037
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 460
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: k8s-4-ext-nubes-ru
+              value_list:
+                - k8s-4-ext-nubes-ru
+              man: Кластер Kubernetes, на котором будет развернут экземпляр
+              is_modifiable: false
+        - id: 1038
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          is_modifiable: true
+          sub_params:
+            - id: 461
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "200"
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 462
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "256"
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 463
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+        - id: 1039
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          sub_params:
+            - id: 464
+              code: domain
+              data_type: string
+              required: true
+              default: flask-h6aq3seq
+              man: 'Если указан FQDN в формате: `myapp.example.com`, предварительно будет проверяться DNS-запись (А-запись **должна смотреть на IP Ingress кластера ресурсной платформы**)<br/><br/>Если указан в формате `myapp`, DNS-запись будет автоматически создана в служебной DNS-зоне'
+              is_modifiable: false
+        - id: 1040
+          code: appConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 40
+          is_modifiable: true
+          sub_params:
+            - id: 465
+              code: gitPath
+              data_type: string
+              required: true
+              default: https://github.com/Foxyhhd/Baldurs-Gate-test.git
+              man: 'Путь до репозитория приложения<br/>Обязательно должен быть передан как URL: `https://....`<br/><br/>Должен быть сетевой доступ до URL для скачивания исходников'
+              is_modifiable: false
+            - id: 466
+              code: healthPath
+              data_type: string
+              required: false
+              default: ""
+              man: Путь до healtcheck для запуска пода в Kubernetes, который отдаст 200 код<br/>Пустое значение означает, что будет проверяться исключительно доступность приложения по порту
+              is_modifiable: false
+            - id: 467
+              code: version
+              data_type: string
+              required: true
+              default: "3.12"
+              value_list:
+                - "3.12"
+              is_modifiable: false
+        - id: 1041
+          code: jsonEnv
+          data_type: map
+          required: false
+          default: '{}'
+          sort: 50
+          is_modifiable: true
+    - name: delete
+      id: 379
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 375
+      kind: instance
+      action: modify
+      params:
+        - id: 1042
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 468
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 469
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 470
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+        - id: 1043
+          code: appConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 471
+              code: gitPath
+              data_type: string
+              required: true
+              default: ""
+              man: 'Путь до репозитория приложения<br/>Обязательно должен быть передан как URL: `https://....`<br/><br/>Должен быть сетевой доступ до URL для скачивания исходников'
+              is_modifiable: false
+            - id: 472
+              code: healthPath
+              data_type: string
+              required: false
+              default: ""
+              man: Путь до healtcheck для запуска пода в Kubernetes, который отдаст 200 код<br/>Пустое значение означает, что будет проверяться исключительно доступность приложения по порту
+              is_modifiable: false
+            - id: 473
+              code: version
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - "3.12"
+              is_modifiable: false
+        - id: 1044
+          code: jsonEnv
+          data_type: map
+          required: false
+          sort: 30
+    - name: reconcile
+      id: 381
+      kind: action
+      action: reconcile
+      params: []
+    - name: redeploy
+      id: 380
+      kind: action
+      action: redeploy
+      params:
+        - id: 1045
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 474
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: k8s-4-ext-nubes-ru
+              value_list:
+                - k8s-4-ext-nubes-ru
+              man: Кластер Kubernetes, на котором будет развернут экземпляр
+              is_modifiable: false
+    - name: resume
+      id: 378
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 377
+      kind: instance
+      action: suspend
+      params: []

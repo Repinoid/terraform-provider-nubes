@@ -1,0 +1,190 @@
+name: http
+service_id: 98
+service_display_name: Простой HTTP контейнер
+service_short_name: http
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 77
+      kind: instance
+      action: create
+      params:
+        - id: 212
+          code: domain
+          data_type: string
+          required: true
+          default: http-1
+          regex: ^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
+          unique_scope: provider
+          descr: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          man: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          sort: 10
+        - id: 213
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: true
+          default: "100"
+          maxvalue: 4000
+          minvalue: 100
+          descr: Квота ядра пода (Указывается в mili)
+          man: Квота ядра пода (Указывается в mili)
+          sort: 30
+          is_modifiable: true
+        - id: 214
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: true
+          default: "200"
+          maxvalue: 8192
+          minvalue: 128
+          descr: Квота памяти пода (Указывается в Megabytes)
+          man: Квота памяти пода (Указывается в Megabytes)
+          sort: 40
+          is_modifiable: true
+        - id: 215
+          code: resourceInstances
+          data_type: integer &gt; 0
+          required: true
+          default: "1"
+          maxvalue: 7
+          minvalue: 1
+          descr: Количество узлов
+          man: Количество реплик приложения. Трафик будет распределяться между подами в режиме Round-Robin
+          sort: 50
+          is_modifiable: true
+        - id: 216
+          code: resourceRealm
+          data_type: string
+          required: true
+          default: k8s-4-ext-nubes-ru
+          value_list:
+            - k8s-4-ext-nubes-ru
+          func: getAvailableResourceRealms
+          descr: Платформа для развертывания
+          man: Наименование кластера Kubernetes для подключения
+          sort: 20
+        - id: 217
+          code: registryPath
+          data_type: string
+          required: true
+          default: nexus-sa.tst.nubes.ru/docker-nubes/jolt
+          descr: Путь до image, который будет установлен как deployment
+          man: Путь до image, который будет установлен как deployment
+          sort: 60
+          is_modifiable: true
+        - id: 241
+          code: jsonEnv
+          data_type: map
+          required: false
+          man: Массив переменных, будут переданы в env приложения
+          sort: 70
+          is_modifiable: true
+        - id: 782
+          code: ingressAnnotations
+          data_type: map
+          required: false
+          default: '{}'
+          man: Формат ключ/значение<br/>Поддерживает пока простые аннотации
+          sort: 80
+          is_modifiable: true
+    - name: delete
+      id: 78
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 81
+      kind: instance
+      action: modify
+      params:
+        - id: 218
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 4000
+          minvalue: 100
+          sort: 10
+        - id: 219
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 8192
+          minvalue: 128
+          sort: 20
+        - id: 220
+          code: resourceInstances
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 7
+          minvalue: 1
+          descr: Количество узлов
+          sort: 30
+        - id: 1120
+          code: registryPath
+          data_type: string
+          required: true
+          descr: Путь до image, который будет установлен как deployment
+          sort: 40
+        - id: 1121
+          code: jsonEnv
+          data_type: map
+          required: false
+          descr: Массив переменных, будут переданы в env приложения
+          sort: 50
+        - id: 1122
+          code: ingressAnnotations
+          data_type: map
+          required: false
+          descr: Формат ключ/значение<br/>Поддерживает пока простые аннотации
+          sort: 50
+    - name: reconcile
+      id: 403
+      kind: action
+      action: reconcile
+      params: []
+    - name: redeploy
+      id: 79
+      kind: action
+      action: redeploy
+      params:
+        - id: 272
+          code: resourceRealm
+          data_type: string
+          required: true
+          default: k8s-4-ext-nubes-ru
+          value_list:
+            - k8s-4-ext-nubes-ru
+          func: getAvailableResourceRealms
+          descr: Платформа для развертывания
+          sort: 10
+    - name: resume
+      id: 130
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 131
+      kind: instance
+      action: suspend
+      params: []

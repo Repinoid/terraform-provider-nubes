@@ -1,0 +1,127 @@
+name: s3
+service_id: 12
+service_display_name: S3 Object Storage
+service_short_name: s3
+service_man: Руководство доступно по ссылке:<br/>https://docs.s3-website.msk-1.ngcloud.ru/
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 1
+      kind: instance
+      action: create
+      params:
+        - id: 163
+          code: resourceRealm
+          required: true
+          default: s3.msk-1.ngcloud.ru
+          value_list:
+            - s3.msk-1.ngcloud.ru
+          func: getAvailableResourceRealms
+          descr: Платформа для развертывания
+          man: кластер S3 для подключения
+          sort: 20
+        - id: 320
+          code: displayName
+          data_type: string
+          required: true
+          regex: ^[a-zA-Z0-9_]{1,61}[a-zA-Z0-9]$
+          descr: Человеко-читаемое имя (транслит из Elma) - передаётся имя клиента
+          sort: 10
+    - name: create_sub_user
+      id: 6
+      kind: subresource
+      action: create
+      subresource: sub_user
+      params:
+        - id: 60
+          code: subUserName
+          data_type: string
+          required: true
+        - id: 61
+          code: subUserAccess
+          data_type: string
+          required: true
+          value_list:
+            - read
+            - write
+            - readwrite
+            - full
+    - name: delete
+      id: 5
+      kind: instance
+      action: delete
+      params: []
+    - name: delete_sub_user
+      id: 7
+      kind: subresource
+      action: delete
+      subresource: sub_user
+      params:
+        - id: 63
+          code: subUserName
+          data_type: string
+          required: true
+          descr: subUserName. По идее услуга уже создана - должен передаваться из ЛК
+    - name: modify
+      id: 4
+      kind: instance
+      action: modify
+      man: При первичном вызове операции услуга Trial прекращает действие
+      params:
+        - id: 50
+          code: maxSizeGbPerUser
+          data_type: integer &gt; 0
+          required: false
+          maxvalue: 50000
+          minvalue: 1
+          descr: Максимальный размер квоты в gb
+        - id: 51
+          code: maxObjectsPerBucket
+          data_type: integer &gt; 0
+          required: false
+          maxvalue: 1e+07
+          minvalue: 1
+          descr: Кол-во объектов в бакете
+        - id: 52
+          code: maxBucketsPerUser
+          data_type: integer &gt; 0
+          required: false
+          maxvalue: 1000
+          minvalue: 1
+          descr: Количество бакетов пользователя.
+    - name: reconcile
+      id: 407
+      kind: action
+      action: reconcile
+      params: []
+    - name: resume
+      id: 3
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 2
+      kind: instance
+      action: suspend
+      params: []

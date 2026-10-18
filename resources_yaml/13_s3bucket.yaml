@@ -1,0 +1,91 @@
+name: s3bucket
+service_id: 13
+service_display_name: S3 бакет
+service_short_name: s3bucket
+lifecycle:
+    suspend_on_destroy_default: false
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 51
+      kind: instance
+      action: create
+      params:
+        - id: 124
+          code: s3UserUid
+          data_type: uuid
+          required: true
+          ref_svc_id: 12
+          descr: UID Корневой услуги S3. На основе него будет создан бакет.
+        - id: 125
+          code: bucketName
+          data_type: string
+          required: true
+          regex: ^[a-z0-9-]+$
+          descr: Имя бакета s3
+        - id: 126
+          code: maxSize
+          required: true
+          default: "-1"
+          descr: Максимальный размер бакета s3. Если поставить -1, будет безлимит. Размер указывается в Bytes
+          man: Максимальный размер бакета s3. Если поставить 0, будет безлимит. Размер указывается в Bytes
+        - id: 127
+          code: readAll
+          data_type: boolean
+          required: true
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          descr: Публичный доступ на чтение позволяет любому пользователю интернета скачивать объекты из бакета.
+        - id: 128
+          code: listAll
+          data_type: boolean
+          required: true
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          descr: Публичный доступ к листингу позволяет любому пользователю интернета получить список объектов в бакете.
+        - id: 129
+          code: corsAll
+          data_type: boolean
+          required: true
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          descr: Публичный доступ к чтению настроек позволяет любому пользователю интернета читать конфигурации CORS
+        - id: 130
+          code: placement
+          data_type: string
+          required: true
+          default: HOT
+          value_list:
+            - HOT
+            - COLD
+          descr: Класс хранилища, который используется по умолчанию при загрузке объектов. Чем холоднее, тем дешевле место, но дороже обращения
+    - name: delete
+      id: 52
+      kind: instance
+      action: delete
+      params: []

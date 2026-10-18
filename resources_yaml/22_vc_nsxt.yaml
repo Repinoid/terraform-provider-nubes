@@ -1,0 +1,200 @@
+name: vc_nsxt
+service_id: 22
+service_display_name: Сетевой шлюз периметра (Edge)
+service_short_name: vc_nsxt
+service_man: '# Инструкция по развертыванию Сетевой шлюз периметра (Edge) через платформу<br/><br/>## 1. Общая информация<br/><br/>Сервис **Сетевой шлюз периметра (Edge)** предназначен для создания периметрового сетевого шлюза в рамках одного виртуального датацентра (vDC) или группы виртуальных датацентров (groupvDC).  <br/>При создании автоматически разворачивается routed-сеть с адресным пространством `10.10.102.0/24`.  <br/>Сервис обеспечивает сетевую изоляцию, маршрутизацию, а также может включать функциональность балансировщика нагрузки AVI (ALB) для последующей интеграции, включая поддержку кластеров Штурвал.<br/><br/>### Доступные операции<br/><br/>**create** — Создание нового Edge с привязкой к vDC или groupvDC и развёртыванием routed-сети.  <br/>**delete** — Удаление ранее созданного Edge. Недоступно при наличии зависимых услуг (vApp, VM, Кластер Штурвал).  <br/>**modify** — Изменение параметров и сетевых настроек существующего Edge.<br/><br/>---<br/><br/>## 2. Параметры развертывания<br/><br/>Ниже приведены параметры операции **create**.<br/><br/>### Тип родительской услуги<br/>Определяет контекст размещения Edge.  <br/>Допустимые значения: `vdc`, `groupvdc`.  <br/>Использование:<br/>- При выборе `vdc` обязателен параметр **UUID VDC**.<br/>- При выборе `groupvdc` обязателен параметр **UUID Группы VDC**.<br/><br/>### UUID VDC<br/>Идентификатор виртуального датацентра.  <br/>Необходимо предварительно создать vDC через услугу «Виртуальный датацентр (vDC)».  <br/>Указывается только при выборе родительского типа `vdc`.<br/><br/>### UUID Группы VDC<br/>Идентификатор группы виртуальных датацентров.  <br/>Создаётся через услугу «Группа виртуальных датацентров (groupvDC)».  <br/>Используется при выборе родительского типа `groupvdc`.<br/><br/>### Включить ALB<br/>Флаг активации AVI Load Balancer в Cloud Director.  <br/>Пример значения: `true`/`false`.  <br/>Нужен для развёртывания кластера Штурвал и возможности создания Virtual Services.<br/><br/>### Наименование segroup<br/>Имя сервиса групп (segroup) на уровне ресурсной платформы.  <br/>Обязательно при включённом ALB.  <br/>Определяет группу, в которой будут выделяться пулы AVI для Virtual Services.<br/><br/>### virtualServicesCount<br/>Количество резервируемых виртуальных сервисов (Virtual Services) на AVI.  <br/>Типичное значение: 1–10 в зависимости от нагрузки.<br/><br/>---<br/><br/>## 3. Рекомендованные характеристики<br/><br/>### Тестовое окружение (Test)<br/><br/>- Тип родительской услуги: `vdc`  <br/>- virtualServicesCount: 1–2  <br/>- ALB: выключен по умолчанию (включать только при необходимости тестирования Штурвала)  <br/>- segroup: задаётся только при включённом ALB  <br/>- VDC гарантии CPU/RAM: минимальные (поскольку изменить их после создания нельзя)<br/><br/>### Промышленное окружение (Production)<br/><br/>- Тип родительской услуги: `groupvdc` при работе с распределёнными нагрузками или `vdc` для локализованных проектов  <br/>- virtualServicesCount: 3–10, исходя из предполагаемого количества публикаций  <br/>- ALB: включён, если требуется высокая доступность сервисов или используется кластер Штурвал  <br/>- segroup: рекомендуется использовать выделенную группу под проект  <br/>- VDC гарантии CPU/RAM: повышенные, с учётом того, что изменить их после создания невозможно без пересоздания vDC<br/><br/>---<br/><br/>## 4. Выходные параметры<br/><br/>### Имя Edge<br/>Уникальное название созданного сетевого шлюза, используется для ссылок и дальнейших операций.<br/><br/>### Имя routed-сети<br/>Автоматически созданная routed-сеть с подсетью `10.10.102.0/24`, используется для подключения ресурсов.<br/><br/>### Параметры Edge<br/>Набор параметров, указанных пользователем при создании: тип услуги, ALB, segroup, virtualServicesCount и др.  <br/>Используются в операциях modify и для анализа состояния сервиса.<br/><br/>---<br/><br/>## 5. Дополнительная информация<br/><br/>- В рамках сервиса **один раз при создании задаётся гарантированная доля CPU/RAM vDC**. Изменить её невозможно — требуется пересоздание vDC.  <br/>- Удаление Edge недоступно при наличии зависимых ресурсов (vApp, VM, кластер Штурвал).  <br/>- При использовании ALB необходимо корректно указывать segroup, чтобы обеспечить корректное выделение пулов AVI.  <br/>- При выборе режима `groupvdc` следует учитывать распределение нагрузки между несколькими vDC.  <br/>- SNAT для всех ресурсов внутри Edge можно активировать через операцию modify (параметры выделения VIP и ipSpace).<br/><br/>'
+lifecycle:
+    suspend_on_destroy_default: false
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 10
+      kind: instance
+      action: create
+      params:
+        - id: 8
+          code: vdcUid
+          data_type: string
+          required: false
+          ref_svc_id: 21
+          descr: UUID Услуги `Виртуальный датацентр (vDC)`
+          man: 'Необходимо, если выбран тип подключаемой VDC: `vdc`'
+          sort: 10
+        - id: 340
+          code: needEnableAVI
+          data_type: boolean
+          required: true
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          descr: Включение Load Balancer
+          man: Параметры `Наименование segroup`, `Кол-во VS на AVI` необходимо также указать
+          sort: 30
+          is_modifiable: true
+        - id: 341
+          code: virtualServicesCount
+          data_type: integer &gt; 0
+          required: false
+          default: "1"
+          maxvalue: 4
+          minvalue: 1
+          descr: Кол-во виртуальных сервисов, которые **резервируются** на AVI
+          man: Во избежании коллапса пока выделяется до 4<br/>Необходимо указывать, если включён параметр `Включить ALB`
+          sort: 50
+          is_modifiable: true
+        - id: 621
+          code: vdcType
+          data_type: string
+          required: true
+          default: vdc
+          value_list:
+            - vdc
+            - vdcGroup
+          descr: Тип родительской услуги
+          man: При выборе vdc обеспечивает сетевую доступность только в рамках этого vdc<br/>При выборе groupvdc обеспечивает сетевую доступность между всеми vdc, которые включены в groupvdc
+          sort: 0
+        - id: 622
+          code: vdcGroupUid
+          data_type: string
+          required: false
+          ref_svc_id: 29
+          descr: UUID Услуги `Группа виртуальных датацентров (groupvDC)`
+          man: 'Необходимо, если выбран тип подключаемой VDC: `groupvdc`'
+          sort: 20
+        - id: 825
+          code: qosProfile
+          required: false
+          descr: Параметр пока не работает<br/>Должен возвращать поле из ресурсной платформы типа vc из .vcd.hardware.gatewayQoSProfiles<br/><br/>Как по идее должен работать.<br/>Нужно заполнить или CFS vdcUid, или vdcGroupUid<br/>Идеально конечно проверять `if (params.vdcType == &quot;vdc&quot; && params.vdcUid != &quot;&quot;)` или `if (params.vdcType == &quot;vdcGroup&quot; && params.vdcGroupUid != &quot;&quot;)`<br/><br/>Далее надо пойти по стейту vdc -&gt; org -&gt; resPlatform, взять gatewayQoSProfiles<br/>Или пойти по стейту vdcgroup -&gt; vdc -&gt; org -&gt; resPlatform, взять gatewayQoSProfiles<br/><br/>Регулярку могу написать (Виталя)
+          man: if (vdcUid != '&quot;) {<br/>  наборфункций1<br/>} <br/><br/>elif (vdcGroupUid != &quot;&quot;) {<br/>  наборфункций2<br/>}<br/><br/>else {<br/>  return &quot;Необходимо выбрать vdc или vdcgroup&quot;<br/>}
+          sort: 60
+          depends_on: vdcUid,vdcGroupUid
+          is_modifiable: true
+        - id: 1110
+          code: routedNetConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 70
+          is_modifiable: true
+          sub_params:
+            - id: 649
+              code: ipAddrPool
+              data_type: string
+              required: true
+              default: 10.10.102.0/24
+              regex: ^((25[0-4]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)\.){3}0/24$
+              man: '**Параметр не изменяемый**<br/>Адрессный пул, которая будет присвоена routed-сети. Описывается как (10.10.10.0/24). Маска 24 обязательна. (.1) - шлюз. (.2-.254) - Под адресацию для ВМ'
+              is_modifiable: false
+            - id: 650
+              code: mainDns
+              data_type: string
+              required: true
+              default: 81.22.46.22
+              regex: ^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)$
+              man: Подставляется автоматически в resolv.conf при создании виртуальных машин
+              is_modifiable: false
+            - id: 651
+              code: secondDns
+              data_type: string
+              required: true
+              default: 185.247.187.77
+              regex: ^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)$
+              man: Подставляется автоматически в resolv.conf при создании виртуальных машин
+              is_modifiable: false
+    - name: delete
+      id: 25
+      kind: instance
+      action: delete
+      man: Невозможно удалить если routed-сеть в Edge связана с:<br/>- vApp<br/>- VM<br/>- Kubernetes-кластер Штурвал<br/><br/>Запустить операцию возможно, но будет ошибка
+      params: []
+    - name: modify
+      id: 111
+      kind: instance
+      action: modify
+      man: Для создания SNAT Правила убедитесь, что в организации есть свободные IP<br/>Редактировать кол-во свободных IP можно в услуге `Организация в Cloud Director` -&gt; `modify`
+      params:
+        - id: 368
+          code: needEnableAVI
+          data_type: boolean
+          required: false
+          value_list:
+            - "false"
+            - "true"
+          descr: Включение Load Balancer
+          man: Параметры `Наименование segroup`, `Кол-во VS на AVI` необходимо также указать
+          sort: 10
+        - id: 369
+          code: virtualServicesCount
+          data_type: integer &gt; 0
+          required: false
+          maxvalue: 4
+          minvalue: 1
+          descr: Кол-во виртуальных сервисов, которые выделяются на AVI
+          man: Во избежании коллапса пока выделяется до 4<br/>Необходимо указывать, если включён параметр `Включить ALB`
+          sort: 30
+        - id: 372
+          code: ipSpaceName
+          data_type: string
+          required: false
+          descr: Имя ip Space для внешнего IP
+          man: Необходимо указывать, если включён параметр `Выделить VIP для SNAT`
+          sort: 50
+        - id: 856
+          code: qosProfile
+          data_type: string
+          required: false
+          sort: 40
+        - id: 1112
+          code: routedNetConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 70
+          sub_params:
+            - id: 652
+              code: ipAddrPool
+              data_type: string
+              required: true
+              default: ""
+              regex: ^((25[0-4]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)\.){3}0/24$
+              man: '**Параметр не изменяемый**<br/>Адрессный пул, которая будет присвоена routed-сети. Описывается как (10.10.10.0/24). Маска 24 обязательна. (.1) - шлюз. (.2-.254) - Под адресацию для ВМ'
+              is_modifiable: false
+            - id: 653
+              code: mainDns
+              data_type: string
+              required: true
+              default: ""
+              regex: ^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)$
+              man: Подставляется автоматически в resolv.conf при создании виртуальных машин
+              is_modifiable: false
+            - id: 654
+              code: secondDns
+              data_type: string
+              required: true
+              default: ""
+              regex: ^((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9][0-9]?|0)$
+              man: Подставляется автоматически в resolv.conf при создании виртуальных машин
+              is_modifiable: false
+    - name: reconcile
+      id: 252
+      kind: action
+      action: reconcile
+      params: []

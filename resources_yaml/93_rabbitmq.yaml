@@ -1,0 +1,210 @@
+name: rabbitmq
+service_id: 93
+service_display_name: RabbitMQ
+service_short_name: rabbitmq
+service_man: '# Инструкция по развертыванию RabbitMQ через платформу<br/><br/>---<br/>## 1. Общая информация<br/>RabbitMQ — это брокер сообщений с открытым исходным кодом, который обеспечивает надёжную доставку сообщений между приложениями.<br/>Позволяет надёжно передавать сообщения между сервисами и системами, интегрироваться с внешними решениями и использовать как внутренние, так и защищённые TLS-подключения. Развёртывание полностью автоматизировано платформой.<br/><br/>## Доступные операции<br/>- **create**    — Создание кластера<br/>- **modify**    — Изменение параметров кластера<br/>- **delete**    — Удаление кластера<br/>- **suspend**   — Остановка кластера<br/>- **resume**    — Запуск кластера<br/><br/><br/>---<br/>## 2. Параметры развертывания кластера<br/>Ниже перечислены параметры, которые необходимо указать при создании ресурса RabbitMQ:<br/><br/>* **Платформа для развертывания:**<br/>  Платформа для развертывания (среда, в которой будет развернут кластер). Пример: `k8s-3.ext.nubes.ru`.<br/><br/>* **Количество узлов в сети:**<br/>  Количество реплик в кластере RabbitMQ. При значении больше 1 создаётся кластер с репликацией для обеспечения высокой доступности.<br/>  Пример: `1` (single node) или `3` (кластер с репликацией)<br/><br/>* **Квота (megabyte) памяти пода:**<br/>  Квота памяти пода в мегабайтах. Пример: `2048`<br/><br/>* **Квота (millicore) ядра пода:**<br/>  Квота CPU пода в миликорах (1000 mCPU = 1 vCPU). Пример: `1000`<br/><br/>* **Размер (gigabyte) диска для базы данных:**<br/>  Размер диска для хранения данных RabbitMQ в гигабайтах. Пример: `50`<br/><br/>* **Выделяет внешний IP для доступа к master:**<br/>  Флаг, определяющий, нужно ли выделять внешний IP для доступа к master-узлу. При включении создаётся Service типа LoadBalancer и настраивается VIP на порту 5672.<br/>  Пример: `true` или `false`<br/><br/>* **Имя ipSpace для публикации внешнего IP master:**<br/>  Если включен предыдущий параметр, то поле необходимо заполнить. Пример: `internet-no-antiddos-v1`<br/><br/><br/>---<br/>## 3. Модификация кластера<br/>Операция **modify** позволяет изменить параметры существующего кластера RabbitMQ.<br/><br/>**Изменяемые параметры:**<br/>* **Квота (megabyte) памяти пода** — можно увеличить или уменьшить<br/>* **Квота (millicore) ядра пода** — можно увеличить или уменьшить<br/>* **Размер (gigabyte) диска для базы данных** — можно только увеличить (уменьшение не поддерживается)<br/>* **Количество узлов в сети** — можно только увеличить (уменьшение не поддерживается)<br/>* **Выделяет внешний IP для доступа к master** — можно включить или выключить<br/>* **Имя ipSpace для публикации внешнего IP master** — можно изменить при включенном внешнем IP<br/><br/>**Ограничения:**<br/>* Уменьшение размера диска не поддерживается<br/>* Уменьшение количества реплик не поддерживается<br/><br/>---<br/>## 4. Выходные параметры<br/>После успешного развертывания ресурса RabbitMQ платформа возвращает ряд параметров в разделе &quot;Поля состояния (сгенерированные значения)&quot;:<br/><br/>**clusterDomain**<br/>Домен кластера Kubernetes, в котором развернут RabbitMQ.<br/>Пример: `cluster.local`<br/><br/>**inernalConnect**<br/>Внутренние эндпоинты для подключения к кластеру RabbitMQ из других сервисов, развернутых внутри той же сети.<br/>Содержит:<br/>* **master** — FQDN для подключения к кластеру. Пример: `rabbitmqk8s.{namespace}.svc.{clusterDomain}`<br/><br/>**externalConnect**<br/>Внешние эндпоинты для подключения к кластеру RabbitMQ извне.<br/>Содержит объекты с полями:<br/>* **admin** — доступ к веб-интерфейсу управления:<br/>  * `fqdn` — полное доменное имя для веб-интерфейса. Пример: `admin.{namespace}.{domain}`<br/>  * `ip` — IP-адрес<br/>* **master** — доступ к AMQP протоколу (если включен внешний IP):<br/>  * `fqdn` — полное доменное имя для AMQP. Пример: `write.{namespace}.{domain}`<br/>  * `ip` — IP-адрес<br/><br/>**monitoring**<br/>Информация о дашбордах мониторинга:<br/>* **allDashboards** — URL для доступа ко всем дашбордам Grafana<br/><br/>Для подключения используются следующие порты:<br/><br/>* **5672** — AMQP протокол (внутренний и внешний доступ, если включен внешний IP)<br/>* **15672** — веб-интерфейс управления (доступен через Ingress по HTTPS)<br/><br/>**Учётные данные**<br/>Данные для подключения к RabbitMQ доступны в разделе &quot;Учётные данные&quot;:<br/>* **adminUser** — имя пользователя администратора<br/>* **adminPass** — пароль администратора<br/><br/><br/>---<br/>## 5. Примеры подключения через консоль (rabbitmqadmin)<br/><br/>### Работа с очередями через rabbitmqadmin<br/><br/>Для работы с RabbitMQ через консоль используется утилита `rabbitmqadmin`. Установите её или используйте образ с предустановленной утилитой.<br/><br/>Задайте переменные окружения с учётными данными:<br/><br/>```bash<br/>export RABBITMQ_USERNAME=&lt;adminUser&gt;<br/>export RABBITMQ_PASSWORD=&lt;adminPass&gt;<br/>export RABBIT_HOST=&lt;host&gt;<br/>```<br/><br/>Где:<br/>* `&lt;adminUser&gt;` и `&lt;adminPass&gt;` — учётные данные из раздела &quot;Учётные данные&quot;<br/>* `&lt;host&gt;` — адрес для подключения:<br/>  * Для внешнего подключения: `externalConnect.admin.fqdn` или `externalConnect.master.fqdn`<br/><br/>**Создание очереди:**<br/><br/>```bash<br/>rabbitmqadmin \<br/>  -H &quot;$RABBIT_HOST&quot; -P 15672 \<br/>  -u &quot;$RABBITMQ_USERNAME&quot; -p &quot;$RABBITMQ_PASSWORD&quot; \<br/>  declare queue name=healthcheck durable=false<br/>```<br/><br/>**Листинг очередей:**<br/><br/>```bash<br/>rabbitmqadmin \<br/>  -H &quot;$RABBIT_HOST&quot; -P 15672 \<br/>  -u &quot;$RABBITMQ_USERNAME&quot; -p &quot;$RABBITMQ_PASSWORD&quot; \<br/>  list queues<br/>```<br/><br/>**Отправка сообщения:**<br/><br/>```bash<br/>rabbitmqadmin \<br/>  -H &quot;$RABBIT_HOST&quot; -P 15672 \<br/>  -u &quot;$RABBITMQ_USERNAME&quot; -p &quot;$RABBITMQ_PASSWORD&quot; \<br/>  publish exchange=amq.default routing_key=healthcheck payload=&quot;ping-$(date +%s)&quot;<br/>```<br/><br/>**Чтение сообщения:**<br/><br/>```bash<br/>rabbitmqadmin \<br/>  -H &quot;$RABBIT_HOST&quot; -P 15672 \<br/>  -u &quot;$RABBITMQ_USERNAME&quot; -p &quot;$RABBITMQ_PASSWORD&quot; \<br/>  get queue=healthcheck ackmode=ack_requeue_false<br/>```<br/><br/>---<br/>## 6. Дополнительная информация<br/>Для подключения к кластеру RabbitMQ используйте полученные эндпоинты из раздела &quot;Поля состояния (сгенерированные значения)&quot; и учётные данные из раздела &quot;Учётные данные&quot;.<br/><br/>Веб-интерфейс управления доступен по адресу, указанному в параметре `externalConnect.admin.fqdn` через HTTPS.<br/><br/>Для внутреннего подключения используйте адрес из `inernalConnect.master` на порту 5672.<br/><br/>---'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 38
+      kind: instance
+      action: create
+      params:
+        - id: 1097
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 619
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: k8s-4-ext-nubes-ru
+              value_list:
+                - k8s-4-ext-nubes-ru
+              is_modifiable: false
+        - id: 1098
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          is_modifiable: true
+          sub_params:
+            - id: 620
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "1000"
+              is_modifiable: false
+            - id: 621
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "1024"
+              is_modifiable: false
+            - id: 622
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+            - id: 623
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: "5"
+              is_modifiable: false
+        - id: 1099
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 30
+          is_modifiable: true
+          sub_params:
+            - id: 624
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              descr: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 625
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: '[]'
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+        - id: 1113
+          code: mqConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 25
+          is_modifiable: true
+          sub_params:
+            - id: 668
+              code: maxMessageSize
+              data_type: integer &gt; 0
+              required: true
+              default: "4"
+              is_modifiable: false
+    - name: delete
+      id: 39
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 106
+      kind: instance
+      action: modify
+      params:
+        - id: 1100
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 626
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 627
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+            - id: 628
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1"
+                - "3"
+                - "5"
+                - "7"
+              is_modifiable: false
+            - id: 629
+              code: disk
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+        - id: 1101
+          code: accessConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 630
+              code: masterIpSpace
+              data_type: string
+              required: true
+              default: ""
+              descr: Из какого Ip-Space резервировать внешний IP<br/>Список предоставляется из Организации, в котором развёрнута ресурсная платформа
+              is_modifiable: false
+            - id: 631
+              code: masterAccessList
+              data_type: json
+              required: true
+              default: ""
+              man: Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем
+              is_modifiable: false
+        - id: 1114
+          code: mqConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 15
+          sub_params:
+            - id: 669
+              code: maxMessageSize
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+    - name: reconcile
+      id: 410
+      kind: action
+      action: reconcile
+      params: []
+    - name: resume
+      id: 117
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 116
+      kind: instance
+      action: suspend
+      man: Пока не работает из за того что RabbitmqCluster нельзя занулить
+      params: []

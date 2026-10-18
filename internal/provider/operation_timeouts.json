@@ -1,0 +1,17 @@
+{
+  "default_timeout": "10m",
+  "idle_timeout": "10m",
+  "operations": {
+    "create": "10m",
+    "modify": "7m",
+    "resume": "7m",
+    "suspend": "7m",
+    "create_user": "7m",
+    "delete_user": "6m",
+    "create_database": "7m",
+    "delete_database": "6m"
+  },
+  "overrides": {
+    "services.90.create": "7m"
+  }
+}

@@ -1,0 +1,336 @@
+name: dummy
+service_id: 1
+service_display_name: Болванка
+service_short_name: dummy
+service_man: '## Болванка для тестов.<br/><br/>А это просто много букв, чтобы посмотреть, как ведет себя текст при переполнении контейнера. <br/><br/><br/>``` json<br/>{<br/>    &quot;iamServiceUrl&quot;: &quot;https://auth-api-test.ngcloud.ru/api/v1/user&quot;,<br/>    &quot;idpResponse&quot;: {<br/>        &quot;prefix&quot;: {<br/>            &quot;charset&quot;: &quot;&quot;,<br/>            &quot;status_text&quot;: &quot;Request Time-out&quot;,<br/>            &quot;text&quot;: true,<br/>            &quot;errordetail&quot;: &quot;&quot;,<br/>            &quot;filecontent&quot;: &quot;Connection Timeout&quot;,<br/>            &quot;responseheader&quot;: {},<br/>            &quot;header&quot;: &quot;&quot;,<br/>            &quot;statuscode&quot;: &quot;408 Request Time-out&quot;,<br/>            &quot;status_code&quot;: 408,<br/>            &quot;mimetype&quot;: &quot;Unable to determine MIME type of file.&quot;<br/>        }<br/>    }<br/>}<br/>```'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 18
+      kind: instance
+      action: create
+      man: Это мануал к операции CREATE сервиса Болванка
+      params:
+        - id: 198
+          code: durationMs
+          data_type: integer &gt;= 0
+          required: true
+          default: "0"
+          descr: перед завершением подождать (sleep) столько миллисекунд
+          man: перед завершением подождать (sleep) столько миллисекунд
+          sort: 20
+          is_modifiable: true
+        - id: 199
+          code: failAtStart
+          data_type: boolean
+          required: true
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          descr: если true, завершить джоб, ничего не записывая в cmdb
+          man: '**Операция не будет завершена**<br/>Она будет в постоянном статусе PENDING, однако в Jenkins Job завершится с ошибкой'
+          sort: 30
+          is_modifiable: true
+        - id: 200
+          code: failInProgress
+          data_type: boolean
+          required: true
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          descr: если true, корректно начать выполнение джоба, но в процессе завершить аварийно, ничего не записывая в cmdb
+          man: если true, корректно начать выполнение джоба, но в процессе завершить аварийно, ничего не записывая в cmdb
+          sort: 40
+          is_modifiable: true
+        - id: 201
+          code: whereFail
+          data_type: integer &gt; 0
+          required: false
+          default: "1"
+          value_list:
+            - "1"
+            - "2"
+            - "3"
+          descr: принимает 1,2,3. Работает с failInProgress. 1 - упасть в prepare. 2 - упасть внутри блока Data fill. 3 - упасть после vault write
+          man: принимает 1,2,3. Работает с failInProgress. 1 - упасть в prepare. 2 - упасть внутри блока Data fill. 3 - упасть после vault write
+          sort: 50
+          is_modifiable: true
+        - id: 242
+          code: resourceRealm
+          data_type: string
+          required: true
+          func: getAvailableResourceRealms
+          descr: Платформа для развертывания
+          man: Наименование ресурсной платформы для подключения
+          sort: 10
+        - id: 286
+          code: bodymessage
+          data_type: string
+          required: false
+          descr: Дата, уходящая в Vault
+          man: Дата, уходящая в Vault
+          sort: 60
+          is_modifiable: true
+        - id: 321
+          code: mapExample
+          data_type: map
+          required: false
+          is_modifiable: true
+          sub_params:
+            - id: 1
+              code: subparam1
+              data_type: string
+              required: false
+              default: ""
+              descr: это для администратора
+              man: это для пользователя
+              is_modifiable: false
+            - id: 2
+              code: subparam2
+              data_type: string
+              required: false
+              default: ""
+              is_modifiable: false
+            - id: 3
+              code: secret
+              data_type: string
+              required: false
+              default: ""
+              descr: это секрет
+              man: значение параметра маскируется. Write Only
+              is_modifiable: false
+              is_sensitive: true
+        - id: 322
+          code: jsonExample
+          data_type: json
+          required: false
+          descr: Для тестирования интерфейса
+          man: Для тестирования интерфейса. Сюда можно писать корректный json
+          is_modifiable: true
+        - id: 396
+          code: nestedRefExample
+          required: false
+        - id: 647
+          code: mapFixed
+          data_type: map-fixed
+          required: false
+          descr: Новый тип поля
+          sub_params:
+            - id: 10
+              code: param1
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              descr: Integer, secret
+              man: integer &gt; 0, sensitive data (secret)
+              is_modifiable: false
+              is_sensitive: true
+            - id: 11
+              code: param2
+              data_type: string
+              required: true
+              default: "1"
+              value_list:
+                - '["1"'
+                - '"2"'
+                - '"3"]'
+              descr: Дескрипшен
+              man: Выбор из списка 1,2,3
+              is_modifiable: false
+            - id: 12
+              code: param3
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              descr: целое положительное
+              man: int &gt; 0, обязательный
+              is_modifiable: false
+            - id: 13
+              code: bol1
+              data_type: boolean
+              required: true
+              default: "false"
+              value_list:
+                - "false"
+                - "true"
+              descr: Булевский, обязательный
+              man: Булевский, обязательный. Проверить, как воспринимается снятый флаг
+              is_modifiable: false
+            - id: 14
+              code: minStr1
+              data_type: string
+              required: true
+              default: abracadabra
+              value_list:
+                - abracadabra
+              descr: не меньше 10 символов
+              is_modifiable: false
+        - id: 654
+          code: arrayMapFixedExample
+          data_type: array-map-fixed
+          required: false
+          descr: Array of map-fixed
+          sub_params:
+            - id: 15
+              code: param1
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              is_modifiable: false
+              is_sensitive: true
+            - id: 16
+              code: param2
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - '[&quot;1&quot;'
+                - '&quot;2&quot;'
+                - '&quot;3&quot;]'
+              is_modifiable: false
+            - id: 17
+              code: param3
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              is_modifiable: false
+            - id: 18
+              code: bol1
+              data_type: boolean
+              required: true
+              default: ""
+              value_list:
+                - "false"
+                - "true"
+              is_modifiable: false
+            - id: 19
+              code: minStr1
+              data_type: string
+              required: true
+              default: ""
+              value_list:
+                - abracadabra
+              descr: не меньше 10 символов
+              is_modifiable: false
+        - id: 863
+          code: arr
+          data_type: array
+          required: true
+          value_list:
+            - test
+            - "2"
+            - val1
+    - name: delete
+      id: 71
+      kind: instance
+      action: delete
+      params: []
+    - name: modify
+      id: 92
+      kind: instance
+      action: modify
+      params:
+        - id: 287
+          code: durationMs
+          data_type: integer &gt;= 0
+          required: true
+          default: "0"
+          descr: перед завершением подождать (sleep) столько миллисекунд
+          man: перед завершением подождать (sleep) столько миллисекунд
+          sort: 10
+        - id: 288
+          code: failAtStart
+          data_type: boolean
+          required: true
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          descr: если true, завершить джоб, ничего не записывая в cmdb
+          sort: 20
+        - id: 289
+          code: failInProgress
+          data_type: boolean
+          required: true
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          descr: если true, корректно начать выполнение джоба, но в процессе завершить аварийно, ничего не записывая в cmdb
+          sort: 30
+        - id: 290
+          code: whereFail
+          data_type: integer &gt; 0
+          required: false
+          value_list:
+            - "1"
+            - "2"
+            - "3"
+          descr: принимает 1,2,3. Работает с failInProgress. 1 - упасть в prepare. 2 - упасть внутри блока Data fill. 3 - упасть после vault write
+          man: принимает 1,2,3. Работает с failInProgress. 1 - упасть в prepare. 2 - упасть внутри блока Data fill. 3 - упасть после vault write
+          sort: 40
+        - id: 291
+          code: bodymessage
+          required: false
+          descr: Дата, уходящая в Vault
+          man: Дата, уходящая в Vault
+          sort: 50
+        - id: 373
+          code: mapExample
+          data_type: map
+          required: false
+          default: '{}'
+          sub_params:
+            - id: 4
+              code: secret
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+              is_sensitive: true
+        - id: 374
+          code: jsonExample
+          required: false
+    - name: reconcile
+      id: 257
+      kind: action
+      action: reconcile
+      params: []
+    - name: redeploy
+      id: 240
+      kind: action
+      action: redeploy
+      params: []
+    - name: resume
+      id: 94
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 93
+      kind: instance
+      action: suspend
+      params: []

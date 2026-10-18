@@ -1,0 +1,281 @@
+name: zones_v2
+service_id: 109
+service_display_name: Управление DNS
+service_short_name: zonesV2
+service_man: '# Управление DNS<br/><br/>## Что делает сервис<br/><br/>Управляет DNS-зоной вашего домена в инфраструктуре `ngcloud.ru`.<br/>Сервис помогает:<br/><br/>- создать DNS-зону;<br/>- поддерживать записи в зоне (добавлять, удалять, массово менять);<br/>- удалять зону;<br/>- синхронизировать данные зоны с фактическим состоянием на DNS-серверах.<br/><br/>Сервис работает с авторитетными DNS-серверами зоны:<br/><br/>- `ns3.ngcloud.ru`<br/>  - `185.247.187.83`<br/>  - `2a10:aa80:0:5::3`<br/>- `ns4.ngcloud.ru`<br/>  - `81.22.46.43`<br/>  - `2a10:aa80:0:6::3`<br/><br/>## Очень важно: что сделать у регистратора домена<br/><br/>Чтобы зона действительно начала обслуживаться, **нужно делегировать домен** у регистратора на авторитетные DNS-серверы:<br/><br/>- `ns3.ngcloud.ru`<br/>- `ns4.ngcloud.ru`<br/><br/>В панели регистратора нужно заменить NS-серверы домена на значения выше.<br/>Без этого записи в зоне могут быть созданы, но интернет не будет использовать их для вашего домена.<br/><br/>## Проверка после настройки<br/><br/>Проверить ответы от серверов зоны:<br/><br/>```bash<br/>dig &lt;ваш_домен&gt; @ns3.ngcloud.ru<br/>dig &lt;ваш_домен&gt; @ns4.ngcloud.ru<br/>```<br/><br/>Проверить, что делегирование у регистратора применилось:<br/><br/>```bash<br/>dig &lt;ваш_домен&gt; NS<br/>```<br/><br/>В ответе должны быть `ns3.ngcloud.ru` и `ns4.ngcloud.ru`.<br/>'
+lifecycle:
+    suspend_on_destroy_default: false
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 254
+      kind: instance
+      action: create
+      man: '# Операция `create` (создание DNS-зоны)<br/><br/>## Что делает операция<br/><br/>`create` создает новую DNS-зону на авторитетных серверах сервиса.<br/>После создания зона закрепляется за пользователем, который запустил создание инстанса.<br/><br/>## Когда использовать<br/><br/>- подключаете домен к сервису впервые;<br/>- нужна новая отдельная зона.<br/><br/>## Важное условие после создания<br/><br/>У регистратора домена нужно делегировать зону на:<br/><br/>- `ns3.ngcloud.ru`<br/>  - `185.247.187.83`<br/>  - `2a10:aa80:0:5::3`<br/>- `ns4.ngcloud.ru`<br/>  - `81.22.46.43`<br/>  - `2a10:aa80:0:6::3`<br/><br/>Если этого не сделать, зона будет создана технически, но в интернете домен не начнет работать через эти DNS.<br/><br/>## Объяснение параметра `Типа зоны`<br/><br/>### `NATIVE`<br/><br/>Это основная (ведущая) зона в нашем сервисе.<br/>Вы управляете записями здесь, и именно эта зона считается источником правды.<br/><br/>### `SLAVE`<br/><br/>Это копия зоны, которая подтягивает данные с внешнего DNS-сервера.<br/>Такой режим нужен, когда истинный источник записей находится не в нашем сервисе, а на другом DNS.<br/><br/>## Что проверяет операция<br/><br/>- что такая зона еще не существует на целевых DNS;<br/>- корректность входных параметров зоны;<br/>- ограничения на служебные/запрещенные имена зон.'
+      params:
+        - id: 761
+          code: zoneName
+          data_type: string
+          required: true
+          regex: ^([a-z0-9-]+\.)+[a-z0-9-]+$
+          maxlength: 64
+          minlength: 1
+          descr: Имя зоны
+          sort: 20
+        - id: 762
+          code: zoneKind
+          data_type: string
+          required: true
+          default: NATIVE
+          value_list:
+            - NATIVE
+            - SLAVE
+          descr: Тип зоны
+          sort: 30
+        - id: 763
+          code: zoneMastersForSlave
+          data_type: string
+          required: false
+          descr: Использовать если выбран тип SLAVE. IP адреса в формате через пробел для настройки Master-серверов
+          man: Пример:<br/>**8.8.8.8 8.8.4.4**
+          sort: 40
+        - id: 764
+          code: zoneRefresh
+          data_type: integer &gt; 0
+          required: true
+          default: "86400"
+          minvalue: 600
+          descr: Время ожидания ответа вторичного DNS перед запросом SOA-записи с первичных серверов
+          sort: 50
+        - id: 765
+          code: zoneRetry
+          data_type: integer &gt; 0
+          required: true
+          default: "7200"
+          minvalue: 600
+          descr: Время в течение которого сервер повторно попробует синхронизировать информацию с первичных DNS-серверов
+          sort: 60
+        - id: 766
+          code: zoneExpire
+          data_type: integer &gt; 0
+          required: true
+          default: "3600000"
+          minvalue: 3600
+          descr: Время в течение которого вторичный DNS будет пытаться завершить синхронизацию зоны с первичным
+          sort: 70
+        - id: 767
+          code: zoneTTL
+          data_type: integer &gt; 0
+          required: true
+          default: "86400"
+          minvalue: 600
+          descr: Время, в течение которого информация будет кешироваться другими DNS-серверами
+          sort: 80
+        - id: 768
+          code: resourceRealm
+          data_type: string
+          required: true
+          default: powerdns
+          value_list:
+            - powerdns
+          func: getAvailableResourceRealms
+          sort: 10
+    - name: create_record
+      id: 260
+      kind: subresource
+      action: create
+      subresource: record
+      man: '# Операция `create_record` (добавление одной записи)<br/><br/>## Что делает операция<br/><br/>`create_record` точечно добавляет одну DNS-запись в существующую зону.<br/>Если аналогичная запись уже есть, итоговый набор дополняется в рамках логики типа/имени.<br/><br/>## Когда использовать<br/><br/>- нужно добавить одну новую запись без массовой переработки зоны;<br/>- нужно быстро внести точечное изменение.<br/>'
+      params:
+        - id: 777
+          code: recordName
+          data_type: string
+          required: true
+          regex: ^([a-zA-Z0-9\-_]+\.)*[a-zA-Z0-9\-_]+$|^(\d{1,3}\.){3}\d{1,3}$|^.+$
+          unique_scope: parent
+          maxlength: 64
+          minlength: 1
+          man: Имя зоны в конце проставляется автоматически
+          sort: 10
+        - id: 778
+          code: recordTTL
+          data_type: integer &gt; 0
+          required: true
+          default: "3600"
+          maxvalue: 84000
+          minvalue: 30
+          man: Time-to-Leave записи. Раз в какое время запись будет обновлена
+          sort: 20
+        - id: 779
+          code: recordType
+          data_type: string
+          required: true
+          default: A
+          value_list:
+            - A
+            - AAAA
+            - CNAME
+            - MX
+            - SRV
+            - TXT
+            - LUA
+            - NS
+            - SSHFP
+          sort: 30
+        - id: 780
+          code: recordInput
+          data_type: array-map-fixed
+          required: true
+          default: '[{}]'
+          man: Валидация производится только после запуска операции. Если при указанном типе будет указано некорректно значение, это будет описано в логе ошибки операции
+          sort: 40
+          sub_params:
+            - id: 240
+              code: record
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+    - name: delete
+      id: 255
+      kind: instance
+      action: delete
+      man: '# Операция `delete` (удаление зоны)<br/><br/>## Что делает операция<br/><br/>`delete` удаляет DNS-зону целиком вместе со всеми записями.<br/><br/>## Когда использовать<br/><br/>- зона больше не нужна;<br/>- домен выводится из эксплуатации в рамках сервиса.<br/><br/>## Важная логика<br/><br/>- удаляется вся зона, а не отдельные записи;<br/>- перед удалением стоит проверить, что домен действительно не используется.<br/>'
+      params: []
+    - name: delete_record
+      id: 261
+      kind: subresource
+      action: delete
+      subresource: record
+      man: '# Операция `delete_record` (удаление записей по имени)<br/><br/>## Что делает операция<br/><br/>`delete_record` удаляет все записи с указанным именем (`recordName`), независимо от типа (`A`, `TXT`, `CNAME` и т.д.).<br/><br/>## Когда использовать<br/><br/>- нужно полностью убрать конкретное имя из зоны;<br/>- требуется быстро очистить все варианты записи для одного имени.<br/><br/>## Важная логика<br/><br/>- удаляются все типы записей для выбранного имени;<br/>- если нужно удалить только один тип записи, лучше использовать `modify_record` с нужным целевым состоянием.<br/>'
+      params:
+        - id: 781
+          code: recordName
+          data_type: string
+          required: true
+    - name: modify
+      id: 256
+      kind: instance
+      action: modify
+      man: '# Операция `modify` (массовое изменение записей зоны)<br/><br/>## Что делает операция<br/><br/>`modify` обновляет записи зоны целиком на основе переданного массива `records`.<br/>Это операция &quot;приведения к целевому состоянию&quot;: система берет входной набор и применяет его на DNS-серверах.<br/><br/>## Когда использовать<br/><br/>- нужно массово обновить зону;<br/>- нужно заменить сразу несколько записей одним запуском;<br/>- нужно синхронно привести зону к заранее подготовленному списку записей.<br/><br/>## Важная логика<br/><br/>- запись группируется по `(имя, тип, TTL)`;<br/>- операция ориентирована на полное обновление набора, а не на &quot;точечную мелкую правку&quot;.<br/><br/>Для точечных изменений одной записи обычно удобнее `create_record` или `modify_record`.<br/>'
+      params:
+        - id: 769
+          code: records
+          data_type: array-map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 85
+              code: recordType
+              data_type: string
+              required: true
+              default: A
+              value_list:
+                - A
+                - AAAA
+                - CNAME
+                - MX
+                - SRV
+                - TXT
+                - LUA
+                - NS
+                - SSHFP
+                - CAA
+              is_modifiable: false
+            - id: 86
+              code: recordName
+              data_type: string
+              required: true
+              default: ""
+              regex: ^([a-zA-Z0-9\-_]+\.)*[a-zA-Z0-9\-_]+$|^(\d{1,3}\.){3}\d{1,3}$|^.+$
+              man: Имя зоны в конце проставляется автоматически
+              is_modifiable: false
+            - id: 87
+              code: recordInput
+              data_type: string
+              required: true
+              default: ""
+              man: Валидация производится только после запуска операции. Если при указанном типе будет указано некорректно значение, это будет описано в логе ошибки операции
+              is_modifiable: false
+            - id: 88
+              code: recordTTL
+              data_type: integer &gt; 0
+              required: true
+              default: "3600"
+              man: Time-to-Leave записи. Раз в какое время запись будет обновлена
+              is_modifiable: false
+    - name: modify_record
+      id: 262
+      kind: subresource
+      action: modify
+      subresource: record
+      man: '# Операция `modify_record` (изменение конкретной записи)<br/><br/>## Что делает операция<br/><br/>`modify_record` заменяет записи с указанным именем одной новой записью заданного типа и значения.<br/><br/>## Когда использовать<br/><br/>- нужно исправить одну конкретную запись;<br/>- нужно заменить старые значения записи на новое целевое значение.<br/><br/>## Важная логика<br/><br/>- существующие записи выбранного имени очищаются;<br/>- затем добавляется одна новая запись с переданными параметрами.<br/>'
+      params:
+        - id: 783
+          code: recordName
+          data_type: string
+          required: true
+          sort: 10
+        - id: 784
+          code: recordTTL
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 84000
+          minvalue: 30
+          man: Time-to-Leave записи. Раз в какое время запись будет обновлена
+          sort: 20
+        - id: 785
+          code: recordType
+          data_type: string
+          required: true
+          value_list:
+            - A
+            - AAAA
+            - CNAME
+            - MX
+            - SRV
+            - TXT
+            - LUA
+            - NS
+            - SSHFP
+          sort: 30
+        - id: 786
+          code: recordInput
+          data_type: array-map-fixed
+          required: true
+          default: '[{}]'
+          man: Заменяет все текущие записи конкретного типа<br/>Валидация производится только после запуска операции. Если при указанном типе будет указано некорректно значение, это будет описано в логе ошибки операции
+          sort: 40
+          depends_on: recordName
+          sub_params:
+            - id: 241
+              code: record
+              data_type: string
+              required: true
+              default: ""
+              is_modifiable: false
+    - name: reconcile
+      id: 259
+      kind: action
+      action: reconcile
+      man: '# Операция `reconcile` (актуализация состояния зоны)<br/><br/>## Что делает операция<br/><br/>`reconcile` подтягивает актуальное фактическое состояние DNS-зоны и синхронизирует его с данными инстанса.<br/>Операция техническая: она нужна для выравнивания состояния, а не для бизнес-изменений записей.<br/><br/>## Когда использовать<br/><br/>- записи менялись вручную на DNS-серверах;<br/>- нужно обновить схему/состояние инстанса в личном кабинете;<br/>- нужно импортировать текущие записи в управляемое состояние.<br/><br/>## Важная логика<br/><br/>- актуализируется список записей в данных инстанса;<br/>- стандартно ничего &quot;нового&quot; для клиента не добавляет и не удаляет само по себе, а приводит данные к реальности.<br/>'
+      params: []

@@ -1,0 +1,196 @@
+name: k8s_velero
+service_id: 86
+service_display_name: Velero
+service_short_name: k8sVelero
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 332
+      kind: instance
+      action: create
+      params:
+        - id: 962
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          is_modifiable: true
+          sub_params:
+            - id: 334
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "1000"
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 336
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "2048"
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 337
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: "1"
+              value_list:
+                - "1"
+                - "2"
+                - "3"
+              is_modifiable: false
+        - id: 963
+          code: startupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 338
+              code: resourceRealm
+              data_type: string
+              required: true
+              default: k8s-4-ext-nubes-ru
+              value_list:
+                - k8s-4-ext-nubes-ru
+              is_modifiable: false
+        - id: 964
+          code: nodeAgentConfiguration
+          data_type: map-fixed
+          required: true
+          man: Реплик выставляется автоматически столько, сколько Worker-узлов в кластере
+          sort: 30
+          is_modifiable: true
+          sub_params:
+            - id: 551
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: "2000"
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 552
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: "2048"
+              man: Указывается в Megabytes
+              is_modifiable: false
+        - id: 1076
+          code: backupConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 40
+          sub_params:
+            - id: 555
+              code: s3BucketUid
+              data_type: uuid
+              required: true
+              default: ""
+              man: Экземпляр S3-Бакета обязателен<br/>Учётная запись будет создана автоматически, если её нету
+              is_modifiable: false
+    - name: delete
+      id: 331
+      kind: instance
+      action: delete
+      params:
+        - id: 1082
+          code: deleteS3Bucket
+          data_type: boolean
+          required: true
+          default: "false"
+          value_list:
+            - "false"
+            - "true"
+          sort: 10
+    - name: modify
+      id: 334
+      kind: instance
+      action: modify
+      params:
+        - id: 965
+          code: clusterConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 10
+          sub_params:
+            - id: 345
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 347
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Megabytes
+              is_modifiable: false
+            - id: 348
+              code: replicas
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              value_list:
+                - "1"
+                - "2"
+                - "3"
+              is_modifiable: false
+        - id: 966
+          code: nodeAgentConfiguration
+          data_type: map-fixed
+          required: true
+          sort: 20
+          sub_params:
+            - id: 553
+              code: cpu
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Milicores<br/>`1000` Mili == `1` Ядро
+              is_modifiable: false
+            - id: 554
+              code: memory
+              data_type: integer &gt; 0
+              required: true
+              default: ""
+              man: Указывается в Megabytes
+              is_modifiable: false
+    - name: reconcile
+      id: 336
+      kind: action
+      action: reconcile
+      params: []
+    - name: resume
+      id: 335
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 333
+      kind: instance
+      action: suspend
+      params: []

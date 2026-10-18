@@ -1,0 +1,175 @@
+name: harbor
+service_id: 82
+service_display_name: Container Registry
+service_short_name: harbor
+service_man: 'Расширенный реестр для управления Docker-образами с enterprise-функциями безопасности, репликации и контроля доступа.<br/>Container Registry позволяет хранить, развертывать и управлять Docker-образами контейнеров в инфраструктуре NGcloud.<br/>Сервис можно использовать в процессе разработки контейнеров. Например, вы можете настроить систему автоматизации на работу с реестром в Container Registry в рамках процесса непрерывной интеграции. Контейнеры идеально подходят для запуска небольших, независимых и легко изменяемых сервисов.<br/>Чтобы начать работу, создайте реестр и загрузите в него Docker-образ<br/>Авторизация: keycloak'
+lifecycle:
+    suspend_on_destroy_default: true
+    adopt_existing_on_create_default: false
+outputs:
+    params:
+        - code: state_params
+          type: map
+        - code: state_out
+          type: map
+        - code: state_params_flat
+          type: map
+        - code: state_out_flat
+          type: map
+        - code: vault_secrets
+          type: map
+          sensitive: true
+        - code: vault_url
+          type: string
+        - code: vault_user_path
+          type: string
+        - code: vault_fields
+          type: list
+operations:
+    - name: create
+      id: 14
+      kind: instance
+      action: create
+      man: DEV-Ветка сборки Harbor
+      params:
+        - id: 16
+          code: domain
+          data_type: string
+          required: true
+          default: harbor-1
+          regex: ^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$
+          descr: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          man: Если будет указан FQDN, то происходят проверки DNS на валидность А-записи, или будет добавлено в зону resourceRealm
+          sort: 20
+        - id: 110
+          code: resourceRealm
+          data_type: string
+          required: true
+          default: k8s-4-ext-nubes-ru
+          value_list:
+            - k8s-4-ext-nubes-ru
+          func: getAvailableResourceRealms
+          descr: Платформа для развертывания
+          man: Наименование кластера Kubernetes для подключения
+          sort: 30
+        - id: 228
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: true
+          default: "1000"
+          maxvalue: 4000
+          minvalue: 500
+          descr: Квота ядра пода (Указывается в mili). 1000Mili = 1 Ядро
+          man: Квота ядра пода (Указывается в mili). 1000Mili = 1 Ядро
+          sort: 40
+          is_modifiable: true
+        - id: 229
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: true
+          default: "1024"
+          maxvalue: 8192
+          minvalue: 512
+          descr: Квота памяти пода (Указывается в Megabytes)
+          man: Квота памяти пода (Указывается в Megabytes)
+          sort: 50
+          is_modifiable: true
+        - id: 230
+          code: resourceInstances
+          data_type: integer &gt; 0
+          required: true
+          default: "1"
+          maxvalue: 7
+          minvalue: 1
+          descr: Количество узлов
+          man: Количество узлов в сети
+          sort: 60
+          is_modifiable: true
+        - id: 231
+          code: s3Uid
+          data_type: uuid
+          required: false
+          ref_svc_id: 12
+          descr: UUID экземпляра услуги S3
+          man: UUID экземпляра услуги S3
+          sort: 71
+        - id: 1126
+          code: pvType
+          data_type: string
+          required: true
+          default: s3
+          value_list:
+            - s3
+            - local
+          man: Определяет тип хранилища, где будет храниться образ:<br/><br/>local - на локальных дисках. Необходимо также будет настроить размер хранилища<br/>s3 - будет создан бакет в s3. Необходимо также будет выбрать instanceUid s3
+          sort: 70
+        - id: 1127
+          code: resourceDisk
+          data_type: integer &gt; 0
+          required: false
+          default: "5"
+          maxvalue: 4096
+          minvalue: 5
+          man: Необходимо настраивать, когда выбран тип хранилища - **local**
+          sort: 80
+          is_modifiable: true
+        - id: 1128
+          code: authType
+          data_type: string
+          required: true
+          default: local
+          value_list:
+            - local
+            - keycloak
+          man: Определяет, какой тип авторизации будет использован после создания инстанса:<br/>- local - локальные пользователи<br/>- keycloak - авторизация через УЗ от личного кабинета
+          sort: 90
+    - name: delete
+      id: 15
+      kind: instance
+      action: delete
+      man: DEV-Ветка удаления Harbor
+      params: []
+    - name: modify
+      id: 270
+      kind: instance
+      action: modify
+      params:
+        - id: 822
+          code: resourceInstances
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 7
+          minvalue: 1
+        - id: 823
+          code: resourceCPU
+          data_type: integer &gt; 0
+          required: false
+          maxvalue: 4000
+          minvalue: 500
+        - id: 824
+          code: resourceMemory
+          data_type: integer &gt; 0
+          required: true
+          maxvalue: 8192
+          minvalue: 512
+        - id: 1129
+          code: resourceDisk
+          data_type: integer &gt; 0
+          required: false
+          maxvalue: 4096
+          minvalue: 5
+    - name: reconcile
+      id: 405
+      kind: action
+      action: reconcile
+      params: []
+    - name: resume
+      id: 415
+      kind: instance
+      action: resume
+      params: []
+    - name: suspend
+      id: 416
+      kind: instance
+      action: suspend
+      params: []
