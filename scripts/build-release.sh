@@ -5,7 +5,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION="${1:-}"
 OUTPUT_DIR="${2:-${ROOT_DIR}/dist}"
 PROVIDER_ADDRESS="registry.terraform.io/repinoid/nubes"
-MANIFEST_SOURCE="${ROOT_DIR}/terraform-registry-manifest.json"
 
 if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   echo "Usage: bash scripts/build-release.sh <X.Y.Z> [output-dir]" >&2
@@ -41,11 +40,6 @@ if [[ -e "$OUTPUT_DIR" && ( ! -d "$OUTPUT_DIR" || -n "$(find "$OUTPUT_DIR" -mind
   echo "Error: output directory must be new or empty: $OUTPUT_DIR" >&2
   exit 2
 fi
-if [[ ! -f "$MANIFEST_SOURCE" ]]; then
-  echo "Error: Terraform Registry manifest missing: $MANIFEST_SOURCE" >&2
-  exit 2
-fi
-
 BUILD_DIR="$(mktemp -d "${OUTPUT_DIR}.tmp.XXXXXX")"
 GNUPGHOME="$(mktemp -d)"
 chmod 700 "$GNUPGHOME"
@@ -90,7 +84,6 @@ build_archive linux amd64
 build_archive windows amd64
 build_archive darwin amd64
 
-cp "$MANIFEST_SOURCE" "$BUILD_DIR/terraform-registry-manifest.json"
 (cd "$BUILD_DIR" && sha256sum ./*.zip | sed 's#  \./#  #' > "terraform-provider-nubes_${VERSION}_SHA256SUMS")
 
 SIGN_ARGS=(--batch --yes --local-user "$GPG_KEY_ID")
