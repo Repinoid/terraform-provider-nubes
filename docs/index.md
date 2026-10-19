@@ -48,7 +48,7 @@ Provider release for the Nubes TEST API. Resource schemas below are generated fr
 - [nubes_s3](resources/s3.md) — Хранилище
 - [nubes_s3_sub_user](resources/s3_sub_user.md) — Хранилище
 - [nubes_s3bucket](resources/s3bucket.md) — Хранилище
-- [nubes_service_operation](resources/service_operation.md) — Operations
+- [nubes_service_operation](resources/service_operation.md) — Other TEST resources
 - [nubes_superset](resources/superset.md) — Приложения
 - [nubes_template](resources/template.md) — Приложения
 - [nubes_valo_tenant](resources/valo_tenant.md) — Приложения
@@ -66,6 +66,10 @@ Provider release for the Nubes TEST API. Resource schemas below are generated fr
 - [nubes_vcexternalip](resources/vcexternalip.md) — VMware
 - [nubes_zones_v2](resources/zones_v2.md) — Сеть
 - [nubes_zones_v2_record](resources/zones_v2_record.md) — Сеть
+- [nubes_service_operation](resources/service_operation.md) — Operations
+- [nubes_vc_org_ip_allocation](resources/vc_org_ip_allocation.md) — VMware
+- [nubes_vc_nsxt_snat](resources/vc_nsxt_snat.md) — VMware
+- [nubes_mongodb_rollback](resources/mongodb_rollback.md) — Databases
 
 ## Service documentation
 

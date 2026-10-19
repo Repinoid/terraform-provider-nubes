@@ -12,45 +12,45 @@ Service: ApacheKafka.
 
 ## Schema
 
-| Name | Type | Plan behavior | Sensitive | Description |
-|---|---|---|---|---|
-| `access_configuration` | `object` | Required | No | — |
-| `adopt_existing_on_create` | `bool` | Optional, Computed | No | — |
-| `cluster_configuration` | `object` | Required | No | — |
-| `id` | `string` | Computed | No | — |
-| `keep_on_destroy` | `bool` | Optional, Computed | No | Режим state_only при destroy: ресурс не удаляется и не меняется в облаке, только убирается из состояния. Имеет приоритет над suspend_on_destroy. false = обычное удаление. |
-| `log_level` | `string` | Optional | No | Operation stages log level: none (default), info, debug. Overrides provider-level log_level. |
-| `operation_timeout` | `string` | Optional | No | — |
-| `resource_name` | `string` | Required | No | — |
-| `startup_configuration` | `object` | Required | No | — |
-| `state_out` | `["map","string"]` | Computed | No | — |
-| `state_out_flat` | `["map","string"]` | Computed | No | — |
-| `state_params` | `["map","string"]` | Computed | No | — |
-| `state_params_flat` | `["map","string"]` | Computed | No | — |
-| `suspend_on_destroy` | `bool` | Optional, Computed | No | — |
-| `vault_fields` | `["list","string"]` | Computed | No | — |
-| `vault_secrets` | `["map","string"]` | Computed | Yes | — |
-| `vault_url` | `string` | Computed | No | — |
-| `vault_user_path` | `string` | Computed | No | — |
+| Name | Type | Plan behavior | Details |
+|---|---|---|---|
+| `access_configuration` | `object` | Required | — |
+| `adopt_existing_on_create` | `bool` | Optional, Computed | — |
+| `cluster_configuration` | `object` | Required | — |
+| `id` | `string` | Computed | — |
+| `keep_on_destroy` | `bool` | Optional, Computed | Режим state_only при destroy: ресурс не удаляется и не меняется в облаке, только убирается из состояния. Имеет приоритет над suspend_on_destroy. false = обычное удаление. |
+| `log_level` | `string` | Optional | Operation stages log level: none (default), info, debug. Overrides provider-level log_level. |
+| `operation_timeout` | `string` | Optional | — |
+| `resource_name` | `string` | Required | — |
+| `startup_configuration` | `object` | Required | — |
+| `state_out` | `["map","string"]` | Computed | — |
+| `state_out_flat` | `["map","string"]` | Computed | — |
+| `state_params` | `["map","string"]` | Computed | — |
+| `state_params_flat` | `["map","string"]` | Computed | — |
+| `suspend_on_destroy` | `bool` | Optional, Computed | — |
+| `vault_fields` | `["list","string"]` | Computed | — |
+| `vault_secrets` | `["map","string"]` | Computed | **Sensitive.**  |
+| `vault_url` | `string` | Computed | — |
+| `vault_user_path` | `string` | Computed | — |
 
 ### Nested attributes: `access_configuration`
 
-| Name | Type | Plan behavior | Sensitive | Description |
-|---|---|---|---|---|
-| `allocation_external` | `bool` | Optional, Computed | No | — |
-| `master_access_list` | `string` | Optional, Computed | No | Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем |
+| Name | Type | Plan behavior | Details |
+|---|---|---|---|
+| `allocation_external` | `bool` | Optional, Computed | — |
+| `master_access_list` | `string` | Optional, Computed | Необходимо настраивать, когда зарезервирован внешний адрес<br/>Если передан пустой массив, доступ выделяется всем |
 
 ### Nested attributes: `cluster_configuration`
 
-| Name | Type | Plan behavior | Sensitive | Description |
-|---|---|---|---|---|
-| `cpu` | `number` | Optional, Computed | No | Указывается в Milicores<br/>`1000` Mili == `1` Ядро |
-| `disk` | `number` | Optional, Computed | No | — |
-| `memory` | `number` | Optional, Computed | No | — |
-| `replicas` | `number` | Required | No | — |
+| Name | Type | Plan behavior | Details |
+|---|---|---|---|
+| `cpu` | `number` | Optional, Computed | Указывается в Milicores<br/>`1000` Mili == `1` Ядро |
+| `disk` | `number` | Optional, Computed | — |
+| `memory` | `number` | Optional, Computed | — |
+| `replicas` | `number` | Required | — |
 
 ### Nested attributes: `startup_configuration`
 
-| Name | Type | Plan behavior | Sensitive | Description |
-|---|---|---|---|---|
-| `resource_realm` | `string` | Required | No | Кластер Kubernetes, на котором будет развернут экземпляр |
+| Name | Type | Plan behavior | Details |
+|---|---|---|---|
+| `resource_realm` | `string` | Required | Кластер Kubernetes, на котором будет развернут экземпляр |

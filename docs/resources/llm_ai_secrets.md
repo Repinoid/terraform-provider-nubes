@@ -12,17 +12,17 @@ Service: ML Улей.
 
 ## Schema
 
-| Name | Type | Plan behavior | Sensitive | Description |
-|---|---|---|---|---|
-| `adopt_existing_on_create` | `bool` | Optional, Computed | No | — |
-| `id` | `string` | Computed | No | — |
-| `keep_on_destroy` | `bool` | Optional, Computed | No | Режим state_only при destroy: подресурс не удаляется и не меняется в облаке, только убирается из состояния. Нужен там, где родительский инстанс при destroy не удаляется (например suspend_on_destroy = true) и объект должен остаться внутри него. false = обычное удаление. |
-| `key_name` | `string` | Required | No | Разрешены только латинские буквы и цифры без пробелов Не изменяется после создания. Изменение требует пересоздания. |
-| `llm_ai_id` | `string` | Required | No | — |
-| `log_level` | `string` | Optional | No | Operation stages log level: none (default), info, debug. Overrides provider-level log_level. |
-| `models` | `string` | Required | No | Не изменяется после создания. Изменение требует пересоздания. |
-| `operation_timeout` | `string` | Optional | No | — |
-| `rpm_limit` | `number` | Optional, Computed | No | Не изменяется после создания. Изменение требует пересоздания. |
-| `skip_missing_on_delete` | `bool` | Optional, Computed | No | — |
-| `team_name` | `string` | Required | No | Не изменяется после создания. Изменение требует пересоздания. |
-| `tpm_limit` | `number` | Optional, Computed | No | Не изменяется после создания. Изменение требует пересоздания. |
+| Name | Type | Plan behavior | Details |
+|---|---|---|---|
+| `adopt_existing_on_create` | `bool` | Optional, Computed | — |
+| `id` | `string` | Computed | — |
+| `keep_on_destroy` | `bool` | Optional, Computed | Режим state_only при destroy: подресурс не удаляется и не меняется в облаке, только убирается из состояния. Нужен там, где родительский инстанс при destroy не удаляется (например suspend_on_destroy = true) и объект должен остаться внутри него. false = обычное удаление. |
+| `key_name` | `string` | Required | Разрешены только латинские буквы и цифры без пробелов Не изменяется после создания. Изменение требует пересоздания. |
+| `llm_ai_id` | `string` | Required | — |
+| `log_level` | `string` | Optional | Operation stages log level: none (default), info, debug. Overrides provider-level log_level. |
+| `models` | `string` | Required | Не изменяется после создания. Изменение требует пересоздания. |
+| `operation_timeout` | `string` | Optional | — |
+| `rpm_limit` | `number` | Optional, Computed | Не изменяется после создания. Изменение требует пересоздания. |
+| `skip_missing_on_delete` | `bool` | Optional, Computed | — |
+| `team_name` | `string` | Required | Не изменяется после создания. Изменение требует пересоздания. |
+| `tpm_limit` | `number` | Optional, Computed | Не изменяется после создания. Изменение требует пересоздания. |

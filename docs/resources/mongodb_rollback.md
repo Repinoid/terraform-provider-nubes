@@ -10,12 +10,12 @@ Runs a MongoDB rollback operation for an existing MongoDB instance.
 
 ## Schema
 
-| Name | Type | Plan behavior | Sensitive | Description |
-|---|---|---|---|---|
-| `adopt_existing_on_create` | `bool` | Optional, Computed | No | — |
-| `backup_name` | `string` | Required | No | — |
-| `id` | `string` | Computed | No | — |
-| `log_level` | `string` | Optional | No | Operation stages log level: none (default), info, debug. Overrides provider-level log_level. |
-| `mongodb_id` | `string` | Required | No | — |
-| `operation_timeout` | `string` | Optional | No | — |
-| `run_id` | `string` | Required | No | — |
+| Name | Type | Plan behavior | Details |
+|---|---|---|---|
+| `adopt_existing_on_create` | `bool` | Optional, Computed | — |
+| `backup_name` | `string` | Required | — |
+| `id` | `string` | Computed | — |
+| `log_level` | `string` | Optional | Operation stages log level: none (default), info, debug. Overrides provider-level log_level. |
+| `mongodb_id` | `string` | Required | — |
+| `operation_timeout` | `string` | Optional | — |
+| `run_id` | `string` | Required | — |

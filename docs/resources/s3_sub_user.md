@@ -12,14 +12,14 @@ Service: S3 Object Storage.
 
 ## Schema
 
-| Name | Type | Plan behavior | Sensitive | Description |
-|---|---|---|---|---|
-| `adopt_existing_on_create` | `bool` | Optional, Computed | No | — |
-| `id` | `string` | Computed | No | — |
-| `keep_on_destroy` | `bool` | Optional, Computed | No | Режим state_only при destroy: подресурс не удаляется и не меняется в облаке, только убирается из состояния. Нужен там, где родительский инстанс при destroy не удаляется (например suspend_on_destroy = true) и объект должен остаться внутри него. false = обычное удаление. |
-| `log_level` | `string` | Optional | No | Operation stages log level: none (default), info, debug. Overrides provider-level log_level. |
-| `operation_timeout` | `string` | Optional | No | — |
-| `s3_id` | `string` | Required | No | — |
-| `skip_missing_on_delete` | `bool` | Optional, Computed | No | — |
-| `sub_user_access` | `string` | Required | No | Не изменяется после создания. Изменение требует пересоздания. |
-| `sub_user_name` | `string` | Required | No | Не изменяется после создания. Изменение требует пересоздания. |
+| Name | Type | Plan behavior | Details |
+|---|---|---|---|
+| `adopt_existing_on_create` | `bool` | Optional, Computed | — |
+| `id` | `string` | Computed | — |
+| `keep_on_destroy` | `bool` | Optional, Computed | Режим state_only при destroy: подресурс не удаляется и не меняется в облаке, только убирается из состояния. Нужен там, где родительский инстанс при destroy не удаляется (например suspend_on_destroy = true) и объект должен остаться внутри него. false = обычное удаление. |
+| `log_level` | `string` | Optional | Operation stages log level: none (default), info, debug. Overrides provider-level log_level. |
+| `operation_timeout` | `string` | Optional | — |
+| `s3_id` | `string` | Required | — |
+| `skip_missing_on_delete` | `bool` | Optional, Computed | — |
+| `sub_user_access` | `string` | Required | Не изменяется после создания. Изменение требует пересоздания. |
+| `sub_user_name` | `string` | Required | Не изменяется после создания. Изменение требует пересоздания. |

@@ -10,10 +10,10 @@ Triggers an explicit one-time operation on an existing service instance.
 
 ## Schema
 
-| Name | Type | Plan behavior | Sensitive | Description |
-|---|---|---|---|---|
-| `id` | `string` | Computed | No | — |
-| `instance_uid` | `string` | Required | No | — |
-| `operation` | `string` | Required | No | — |
-| `params` | `["map","string"]` | Optional | No | — |
-| `run_id` | `string` | Required | No | — |
+| Name | Type | Plan behavior | Details |
+|---|---|---|---|
+| `id` | `string` | Computed | — |
+| `instance_uid` | `string` | Required | — |
+| `operation` | `string` | Required | — |
+| `params` | `["map","string"]` | Optional | — |
+| `run_id` | `string` | Required | — |
